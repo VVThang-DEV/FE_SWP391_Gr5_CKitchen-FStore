@@ -1,0 +1,344 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Plus, Minus, ShoppingCart, Trash2 } from "lucide-react";
+import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
+import { Button, Card, Badge } from "../../../components/ui";
+import { Input, Textarea } from "../../../components/ui";
+import { useAuth } from "../../../contexts/AuthContext";
+import { useData } from "../../../contexts/DataContext";
+import toast from "react-hot-toast";
+import "./NewOrder.css";
+
+export default function NewOrder() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { products, stores, orders, addOrder, formatCurrency } = useData();
+  const [cart, setCart] = useState([]);
+  const [notes, setNotes] = useState("");
+  const [requestedDate, setRequestedDate] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [errors, setErrors] = useState({});
+
+  const categories = ["all", ...new Set(products.map((p) => p.category))];
+  const filtered =
+    selectedCategory === "all"
+      ? products
+      : products.filter((p) => p.category === selectedCategory);
+
+  const addToCart = (product) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.productId === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.productId === product.id
+            ? { ...item, quantity: item.quantity + 10 }
+            : item,
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          productName: product.name,
+          quantity: 10,
+          unit: product.unit,
+          price: product.price,
+        },
+      ];
+    });
+    if (errors.cart) setErrors((prev) => ({ ...prev, cart: null }));
+  };
+
+  const updateQuantity = (productId, delta) => {
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.productId === productId) {
+          const newQty = Math.max(1, item.quantity + delta);
+          return { ...item, quantity: newQty };
+        }
+        return item;
+      }),
+    );
+  };
+
+  const removeFromCart = (productId) => {
+    setCart((prev) => prev.filter((item) => item.productId !== productId));
+  };
+
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const validate = () => {
+    const errs = {};
+    if (cart.length === 0) errs.cart = "Vui long chon it nhat 1 san pham";
+    if (!requestedDate) errs.requestedDate = "Vui long chon ngay giao";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!validate()) return;
+    const store = stores.find((s) => s.id === user.store);
+    const newOrder = {
+      id: `DH${String(orders.length + 1).padStart(3, "0")}`,
+      storeId: user.store,
+      storeName: store?.name || user.store,
+      kitchenId: "BT001",
+      status: "pending",
+      priority: "normal",
+      createdAt: new Date().toISOString(),
+      requestedDate,
+      notes,
+      items: cart.map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        unit: item.unit,
+      })),
+      createdBy: user.name,
+      total,
+    };
+    addOrder(newOrder);
+    toast.success(
+      `Don hang da duoc tao thanh cong! Tong: ${formatCurrency(total)}`,
+    );
+    navigate("/store/orders");
+  };
+
+  return (
+    <PageWrapper
+      title="Tao don hang moi"
+      subtitle="Chon san pham va so luong can dat tu bep trung tam"
+      actions={
+        <Button
+          variant="ghost"
+          icon={ArrowLeft}
+          onClick={() => navigate("/store/orders")}
+        >
+          Quay lai
+        </Button>
+      }
+    >
+      <div className="new-order-layout">
+        {/* Product selection */}
+        <div className="new-order-products">
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              marginBottom: "16px",
+              flexWrap: "wrap",
+            }}
+          >
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "var(--radius-full)",
+                  border: "1.5px solid",
+                  borderColor:
+                    selectedCategory === cat
+                      ? "var(--primary)"
+                      : "var(--surface-border)",
+                  background:
+                    selectedCategory === cat
+                      ? "var(--primary-bg)"
+                      : "var(--surface-card)",
+                  color:
+                    selectedCategory === cat
+                      ? "var(--primary)"
+                      : "var(--text-secondary)",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 200ms ease",
+                  textTransform: "capitalize",
+                }}
+              >
+                {cat === "all" ? "Tat ca" : cat}
+              </button>
+            ))}
+          </div>
+
+          {errors.cart && (
+            <div
+              style={{
+                padding: "8px 12px",
+                background: "var(--danger-bg)",
+                color: "var(--danger)",
+                borderRadius: "var(--radius-md)",
+                fontSize: "13px",
+                marginBottom: "12px",
+              }}
+            >
+              {errors.cart}
+            </div>
+          )}
+
+          <div className="product-grid">
+            {filtered.map((product) => {
+              const inCart = cart.find((i) => i.productId === product.id);
+              return (
+                <div
+                  key={product.id}
+                  className={`product-card ${inCart ? "product-card--selected" : ""}`}
+                  onClick={() => addToCart(product)}
+                >
+                  <div className="product-card__img">
+                    {product.image ? (
+                      <img src={product.image} alt={product.name} />
+                    ) : (
+                      <ShoppingCart size={24} />
+                    )}
+                  </div>
+                  <div className="product-card__info">
+                    <h4 className="product-card__name">{product.name}</h4>
+                    <Badge variant="neutral">{product.category}</Badge>
+                    <p className="product-card__price">
+                      {formatCurrency(product.price)} / {product.unit}
+                    </p>
+                  </div>
+                  {inCart && (
+                    <div className="product-card__qty-badge">
+                      {inCart.quantity}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Cart sidebar */}
+        <div className="new-order-cart">
+          <Card>
+            <h3
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: "var(--text-lg)",
+                fontWeight: 600,
+                marginBottom: "16px",
+              }}
+            >
+              Gio hang ({cart.length})
+            </h3>
+
+            {cart.length === 0 ? (
+              <p
+                style={{
+                  color: "var(--text-muted)",
+                  fontSize: "14px",
+                  textAlign: "center",
+                  padding: "32px 0",
+                }}
+              >
+                Chon san pham ben trai de them vao gio
+              </p>
+            ) : (
+              <div className="cart-items">
+                {cart.map((item) => (
+                  <div key={item.productId} className="cart-item">
+                    <div className="cart-item__info">
+                      <p className="cart-item__name">{item.productName}</p>
+                      <p className="cart-item__price">
+                        {formatCurrency(item.price)} / {item.unit}
+                      </p>
+                    </div>
+                    <div className="cart-item__controls">
+                      <button
+                        className="cart-qty-btn"
+                        onClick={() => updateQuantity(item.productId, -5)}
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span className="cart-qty-val">{item.quantity}</span>
+                      <button
+                        className="cart-qty-btn"
+                        onClick={() => updateQuantity(item.productId, 5)}
+                      >
+                        <Plus size={14} />
+                      </button>
+                      <button
+                        className="cart-remove-btn"
+                        onClick={() => removeFromCart(item.productId)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <p className="cart-item__subtotal">
+                      {formatCurrency(item.price * item.quantity)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div
+              style={{
+                borderTop: "1px solid var(--surface-border)",
+                paddingTop: "16px",
+                marginTop: "16px",
+              }}
+            >
+              <Input
+                label="Ngay yeu cau giao"
+                type="date"
+                value={requestedDate}
+                onChange={(e) => {
+                  setRequestedDate(e.target.value);
+                  if (errors.requestedDate)
+                    setErrors((prev) => ({ ...prev, requestedDate: null }));
+                }}
+                required
+                error={errors.requestedDate}
+              />
+              <Textarea
+                label="Ghi chu"
+                placeholder="Ghi chu cho bep trung tam..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                style={{ marginTop: "12px" }}
+              />
+            </div>
+
+            <div
+              style={{
+                borderTop: "1px solid var(--surface-border)",
+                paddingTop: "16px",
+                marginTop: "16px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "12px",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                }}
+              >
+                <span>Tong cong:</span>
+                <span
+                  style={{
+                    color: "var(--primary)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  {formatCurrency(total)}
+                </span>
+              </div>
+              <Button
+                style={{ width: "100%" }}
+                disabled={cart.length === 0}
+                onClick={handleSubmit}
+              >
+                Gui don hang
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </PageWrapper>
+  );
+}

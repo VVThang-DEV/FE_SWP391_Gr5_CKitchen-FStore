@@ -1,0 +1,49 @@
+/* AppLayout.css */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-layout__main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  transition: margin-left var(--transition-base);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-layout--collapsed .app-layout__main {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.app-layout__content {
+  flex: 1;
+}
+
+/* ---- Mobile overlay ---- */
+.app-layout__overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app-layout__main {
+    margin-left: 0;
+  }
+
+  .app-layout--collapsed .app-layout__main {
+    margin-left: 0;
+  }
+
+  .app-layout__overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: calc(var(--z-sticky) - 1);
+  }
+
+  .app-layout--mobile-open .app-layout__overlay {
+    display: block;
+  }
+}
