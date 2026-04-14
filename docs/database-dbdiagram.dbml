@@ -1,8 +1,6 @@
 // ============================================================
 // CKitchen FStore — Database Schema (DBML)
-// https://dbdiagram.io
-// Hệ thống Quản lý Bếp Trung Tâm & Cửa hàng Franchise
-// 17 tables
+// BỔ SUNG: Dynamic Permission + Refresh Token
 // ============================================================
 
 // ---- CORE ----
@@ -36,12 +34,110 @@ Table users {
   id varchar(10) [pk, note: 'u1, u2 ...']
   name nvarchar(100) [not null]
   email varchar(100) [not null, unique]
-  role varchar(30) [not null, note: 'store_staff | kitchen_staff | supply_coordinator | manager | admin']
+  role varchar(30) [not null, note: 'LEGACY: store_staff | kitchen_staff | supply_coordinator | manager | admin']
   store_id varchar(10) [ref: > stores.id, note: 'NULL nếu không phải NV cửa hàng']
   status varchar(20) [not null, note: 'active | inactive']
   last_login datetime
   created_at datetime [default: `now()`]
   updated_at datetime
+}
+
+// ---- DYNAMIC PERMISSION (NEW) ----
+
+Table roles {
+  id varchar(20) [pk, note: 'ROLE_ADMIN, ROLE_MANAGER ...']
+  name nvarchar(100) [not null, unique]
+  code varchar(50) [not null, unique, note: 'admin | manager | store_staff ...']
+  description nvarchar(255)
+  is_system boolean [not null, default: true, note: 'Role hệ thống hay custom']
+  status varchar(20) [not null, default: 'active', note: 'active | inactive']
+  created_at datetime [default: `now()`]
+  updated_at datetime
+}
+
+Table permissions {
+  id varchar(30) [pk, note: 'PERM_ORDER_VIEW ...']
+  code varchar(100) [not null, unique, note: 'orders:view, orders:create, users:assign_role ...']
+  name nvarchar(150) [not null]
+  module varchar(50) [not null, note: 'auth | orders | production | delivery | issues | products | users | config | stores']
+  action varchar(30) [not null, note: 'view | create | update | delete | approve | assign']
+  description nvarchar(255)
+  status varchar(20) [not null, default: 'active', note: 'active | inactive']
+  created_at datetime [default: `now()`]
+  updated_at datetime
+}
+
+Table role_permissions {
+  id int [pk, increment]
+  role_id varchar(20) [not null, ref: > roles.id]
+  permission_id varchar(30) [not null, ref: > permissions.id]
+  created_at datetime [default: `now()`]
+
+  indexes {
+    (role_id, permission_id) [unique]
+  }
+}
+
+Table user_roles {
+  id int [pk, increment]
+  user_id varchar(10) [not null, ref: > users.id]
+  role_id varchar(20) [not null, ref: > roles.id]
+  scope_type varchar(20) [not null, default: 'global', note: 'global | store | kitchen']
+  scope_id varchar(10) [note: 'ID của store/kitchen theo scope_type, NULL nếu global']
+  assigned_by varchar(10) [ref: > users.id, note: 'Người gán role']
+  assigned_at datetime [not null, default: `now()`]
+  expires_at datetime
+  status varchar(20) [not null, default: 'active', note: 'active | revoked | expired']
+  created_at datetime [default: `now()`]
+  updated_at datetime
+
+  indexes {
+    (user_id, role_id, scope_type, scope_id) [unique]
+  }
+}
+
+Table user_permissions {
+  id int [pk, increment]
+  user_id varchar(10) [not null, ref: > users.id]
+  permission_id varchar(30) [not null, ref: > permissions.id]
+  effect varchar(10) [not null, default: 'allow', note: 'allow | deny']
+  scope_type varchar(20) [not null, default: 'global', note: 'global | store | kitchen']
+  scope_id varchar(10) [note: 'ID của store/kitchen theo scope_type, NULL nếu global']
+  reason nvarchar(255)
+  assigned_by varchar(10) [ref: > users.id]
+  assigned_at datetime [not null, default: `now()`]
+  expires_at datetime
+  created_at datetime [default: `now()`]
+  updated_at datetime
+
+  indexes {
+    (user_id, permission_id, scope_type, scope_id) [unique]
+  }
+}
+
+// ---- AUTH / TOKENS (NEW) ----
+
+Table refresh_tokens {
+  id varchar(50) [pk, note: 'RT001 ... hoặc UUID']
+  user_id varchar(10) [not null, ref: > users.id]
+  token_hash varchar(255) [not null, unique, note: 'Lưu hash thay vì token raw']
+  jti varchar(100) [unique, note: 'JWT ID nếu dùng JWT refresh token']
+  device_id varchar(100)
+  device_name nvarchar(150)
+  ip_address varchar(45)
+  user_agent nvarchar(255)
+  issued_at datetime [not null, default: `now()`]
+  expires_at datetime [not null]
+  revoked_at datetime
+  revoked_reason nvarchar(255)
+  replaced_by_token_id varchar(50) [ref: > refresh_tokens.id]
+  is_revoked boolean [not null, default: false]
+  created_at datetime [default: `now()`]
+  updated_at datetime
+
+  indexes {
+    (user_id, is_revoked, expires_at)
+  }
 }
 
 // ---- PRODUCTS & INGREDIENTS ----
@@ -107,31 +203,17 @@ Table order_items {
   created_at datetime [default: `now()`]
 }
 
-// ---- SHIPPERS & DELIVERIES ----
-
-Table shippers {
-  id varchar(10) [pk, note: 'SH001 ...']
-  name nvarchar(100) [not null]
-  phone varchar(20) [not null]
-  license_plate varchar(20) [note: 'Biển số xe']
-  vehicle_type varchar(30) [note: 'xe máy | xe tải nhỏ | xe tải lớn']
-  status varchar(20) [not null, default: 'available', note: 'available | busy | off_duty']
-  kitchen_id varchar(10) [ref: > kitchens.id, note: 'Bếp trung tâm trực thuộc']
-  created_at datetime [default: `now()`]
-  updated_at datetime
-}
+// ---- DELIVERIES ----
 
 Table deliveries {
   id varchar(10) [pk, note: 'GH001 ...']
   order_id varchar(10) [not null, ref: > orders.id]
-  shipper_id varchar(10) [not null, ref: > shippers.id]
-  status varchar(20) [not null, default: 'assigned', note: 'assigned → picked_up → in_transit → delivered | failed']
+  coordinator_id varchar(10) [not null, ref: > users.id, note: 'Điều phối viên phụ trách giao hàng']
+  status varchar(20) [not null, default: 'assigned', note: 'assigned → in_transit → delivered | failed']
   assigned_at datetime [not null, default: `now()`]
-  picked_up_at datetime [note: 'Thời điểm lấy hàng']
   delivered_at datetime [note: 'Thời điểm giao xong']
   notes nvarchar(500)
   receiver_name nvarchar(100) [note: 'Người nhận tại cửa hàng']
-  receiver_signature varchar(255) [note: 'Chữ ký xác nhận (URL)']
   temperature_ok boolean [default: true, note: 'Nhiệt độ đạt chuẩn?']
   created_at datetime [default: `now()`]
   updated_at datetime
@@ -185,8 +267,11 @@ Table production_plans {
 Table plan_ingredients {
   id int [pk, increment]
   plan_id varchar(10) [not null, ref: > production_plans.id]
-  name nvarchar(100) [not null]
-  qty varchar(20) [not null]
+  ingredient_id varchar(10) [not null, ref: > ingredients.id, note: 'FK nguyên liệu']
+  quantity decimal(10,4) [not null, note: 'Lượng cần dùng (số)']
+  unit nvarchar(20) [not null]
+  name nvarchar(100) [not null, note: 'Tên NL (denormalized cho hiển thị)']
+  qty varchar(20) [not null, note: 'Lượng NL (denormalized, VD: 30kg)']
   created_at datetime [default: `now()`]
 }
 
@@ -244,6 +329,15 @@ TableGroup core {
 
 TableGroup user_management {
   users
+  roles
+  permissions
+  role_permissions
+  user_roles
+  user_permissions
+}
+
+TableGroup auth_security {
+  refresh_tokens
 }
 
 TableGroup catalog {
@@ -257,8 +351,7 @@ TableGroup order_management {
   order_items
 }
 
-TableGroup shipping {
-  shippers
+TableGroup delivery {
   deliveries
 }
 
