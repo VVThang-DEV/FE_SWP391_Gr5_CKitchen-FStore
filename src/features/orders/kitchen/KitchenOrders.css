@@ -1,196 +1,4 @@
-/* KanbanBoard.css */
-.kanban {
-  display: flex;
-  gap: var(--space-4);
-  overflow-x: auto;
-  padding-bottom: var(--space-4);
-  min-height: calc(100vh - 200px);
-  width: 100%;
-}
-
-.kanban-column {
-  min-width: 280px;
-  max-width: 320px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--surface-border);
-}
-
-.kanban-column__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--surface-border);
-}
-
-.kanban-column__title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-}
-
-.kanban-column__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.kanban-column__dot--pending {
-  background: var(--warning);
-}
-.kanban-column__dot--confirmed {
-  background: var(--info);
-}
-.kanban-column__dot--producing {
-  background: var(--accent);
-}
-.kanban-column__dot--ready {
-  background: var(--primary);
-}
-.kanban-column__dot--shipping {
-  background: var(--info);
-}
-.kanban-column__dot--delivered {
-  background: var(--success);
-}
-
-.kanban-column__count {
-  font-size: var(--text-xs);
-  font-weight: var(--font-bold);
-  background: var(--surface-hover);
-  color: var(--text-secondary);
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-}
-
-.kanban-column__body {
-  flex: 1;
-  padding: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  overflow-y: auto;
-  min-height: 200px;
-}
-
-.kanban-column__body--drop-active {
-  background: var(--primary-bg);
-  border: 2px dashed var(--primary-lighter);
-  border-radius: var(--radius-md);
-}
-
-/* Order Card */
-.order-card {
-  background: var(--surface-card);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  cursor: grab;
-  transition: all var(--transition-fast);
-  touch-action: none;
-}
-
-.order-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--primary-lighter);
-}
-
-.order-card--dragging {
-  opacity: 0.5;
-  box-shadow: var(--shadow-xl);
-  transform: rotate(2deg);
-}
-
-.order-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-2);
-}
-
-.order-card__id {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-weight: var(--font-bold);
-  color: var(--primary);
-}
-
-.order-card__priority {
-  font-size: 10px;
-  font-weight: var(--font-bold);
-  text-transform: uppercase;
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
-}
-
-.order-card__priority--high {
-  background: var(--danger-bg);
-  color: var(--danger);
-}
-
-.order-card__priority--normal {
-  background: var(--info-bg);
-  color: var(--info);
-}
-
-.order-card__priority--low {
-  background: var(--surface-hover);
-  color: var(--text-muted);
-}
-
-.order-card__store {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--text-primary);
-  margin-bottom: var(--space-1);
-}
-
-.order-card__items {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  margin-bottom: var(--space-2);
-  line-height: 1.5;
-}
-
-.order-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
-
-.order-card__total {
-  font-family: var(--font-mono);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-}
-
-/* View hint on card */
-.order-card__view-hint {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: var(--space-2);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--surface-border);
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.order-card:hover .order-card__view-hint {
-  opacity: 1;
-}
+/* KitchenOrders.css */
 
 /* ---- Order Detail Drawer ---- */
 .order-drawer {
@@ -365,8 +173,8 @@
   border-top: 1px solid var(--surface-border);
 }
 
-/* ---- Kanban Confirm Modal ---- */
-.kanban-confirm {
+/* ---- Order Confirm Modal ---- */
+.order-confirm {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -375,7 +183,7 @@
   text-align: center;
 }
 
-.kanban-confirm__icon {
+.order-confirm__icon {
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -386,19 +194,19 @@
   justify-content: center;
 }
 
-.kanban-confirm__message {
+.order-confirm__message {
   font-size: var(--text-sm);
   color: var(--text-secondary);
   margin: 0;
   line-height: 1.6;
 }
 
-.kanban-confirm__message strong {
+.order-confirm__message strong {
   color: var(--text-primary);
   font-family: var(--font-mono);
 }
 
-.kanban-confirm__status-flow {
+.order-confirm__status-flow {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -407,12 +215,12 @@
   border-radius: var(--radius-md);
 }
 
-.kanban-confirm__arrow {
+.order-confirm__arrow {
   color: var(--text-muted);
   flex-shrink: 0;
 }
 
-.kanban-confirm__actions {
+.order-confirm__actions {
   display: flex;
   gap: var(--space-3);
   justify-content: flex-end;

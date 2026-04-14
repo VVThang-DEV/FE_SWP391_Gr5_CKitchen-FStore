@@ -55,7 +55,7 @@ const NAV_CONFIG = {
         {
           to: "/kitchen/orders",
           icon: ClipboardList,
-          label: "Đơn cần xử lý",
+          label: "Quản lý đơn hàng",
           badge: 5,
         },
         {
