@@ -34,12 +34,7 @@ const NAV_CONFIG = {
       section: "Cửa hàng",
       items: [
         { to: "/store/dashboard", icon: LayoutDashboard, label: "Tổng quan" },
-        {
-          to: "/store/orders",
-          icon: ShoppingCart,
-          label: "Đơn đặt hàng",
-          badge: 3,
-        },
+        { to: "/store/orders", icon: ShoppingCart, label: "Đơn đặt hàng" },
         { to: "/store/orders/new", icon: ClipboardList, label: "Tạo đơn mới" },
         { to: "/store/inventory", icon: Package, label: "Tồn kho" },
         { to: "/store/sales", icon: DollarSign, label: "Ghi nhận bán hàng" },
@@ -52,12 +47,7 @@ const NAV_CONFIG = {
       section: "Bếp trung tâm",
       items: [
         { to: "/kitchen/dashboard", icon: LayoutDashboard, label: "Tổng quan" },
-        {
-          to: "/kitchen/orders",
-          icon: ClipboardList,
-          label: "Quản lý đơn hàng",
-          badge: 5,
-        },
+        { to: "/kitchen/orders", icon: ClipboardList, label: "Quản lý đơn hàng" },
         {
           to: "/kitchen/production",
           icon: ChefHat,
@@ -136,6 +126,7 @@ export default function Sidebar() {
       <button
         className="sidebar__collapse-btn"
         onClick={toggleSidebar}
+        aria-label={sidebarCollapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
         title={sidebarCollapsed ? "Mở rộng" : "Thu gọn"}
       >
         {sidebarCollapsed ? (
@@ -188,12 +179,12 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <button className="sidebar__toggle" onClick={toggleTheme}>
+        <button className="sidebar__toggle" onClick={toggleTheme} aria-label={theme === 'light' ? 'Chuyển chế độ tối' : 'Chuyển chế độ sáng'}>
           {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
           <span>{theme === "light" ? "Chế độ tối" : "Chế độ sáng"}</span>
         </button>
 
-        <button className="sidebar__toggle" onClick={handleLogout}>
+        <button className="sidebar__toggle" onClick={handleLogout} aria-label="Đăng xuất">
           <LogOut size={18} />
           <span>Đăng xuất</span>
         </button>

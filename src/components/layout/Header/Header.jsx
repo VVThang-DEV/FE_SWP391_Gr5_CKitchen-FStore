@@ -48,6 +48,7 @@ export default function Header() {
   const [readNotifs, setReadNotifs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const notifRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -130,7 +131,7 @@ export default function Header() {
   return (
     <header className="app-header">
       <div className="app-header__left">
-        <button className="app-header__menu-btn" onClick={toggleSidebar}>
+        <button className="app-header__menu-btn" onClick={toggleSidebar} aria-label="Mở menu">
           <Menu size={20} />
         </button>
         <nav className="app-header__breadcrumb">
@@ -148,7 +149,16 @@ export default function Header() {
       </div>
 
       <div className="app-header__right">
-        <div className="app-header__search" ref={searchRef}>
+        {/* Mobile search toggle */}
+        <button
+          className="app-header__search-toggle"
+          onClick={() => setMobileSearchOpen(prev => !prev)}
+          aria-label="Tìm kiếm"
+        >
+          <Search size={20} />
+        </button>
+
+        <div className={`app-header__search ${mobileSearchOpen ? 'app-header__search--mobile-open' : ''}`} ref={searchRef}>
           <Search size={16} className="app-header__search-icon" />
           <input
             type="text"
@@ -185,7 +195,7 @@ export default function Header() {
 
         {/* Notification Bell */}
         <div className="notif-wrapper" ref={notifRef}>
-          <button className="app-header__icon-btn" onClick={() => setNotifOpen(!notifOpen)}>
+          <button className="app-header__icon-btn" onClick={() => setNotifOpen(!notifOpen)} aria-label={`Thông báo${unreadCount > 0 ? `, ${unreadCount} chưa đọc` : ''}`}>
             <Bell size={20} />
             {unreadCount > 0 && <span className="app-header__notif-dot">{unreadCount}</span>}
           </button>

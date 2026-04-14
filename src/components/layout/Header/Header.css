@@ -110,7 +110,6 @@
 .app-header__search-input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-bg);
-  width: 320px;
 }
 
 .app-header__search-icon {
@@ -323,6 +322,26 @@
   background: var(--surface-hover);
 }
 
+/* ---- Mobile Search Toggle ---- */
+.app-header__search-toggle {
+  display: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.app-header__search-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
   .app-header__menu-btn {
@@ -330,7 +349,29 @@
   }
 
   .app-header__search {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: var(--space-3);
+    background: var(--surface-card);
+    z-index: var(--z-dropdown);
+    box-shadow: var(--shadow-lg);
     display: none;
+    width: 100%;
+  }
+
+  .app-header__search--mobile-open {
+    display: block;
+  }
+
+  .app-header__search--mobile-open .app-header__search-input {
+    width: 100%;
+    height: 44px;
+  }
+
+  .app-header__search-toggle {
+    display: flex;
   }
 
   .app-header {

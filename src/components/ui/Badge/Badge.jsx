@@ -17,9 +17,9 @@ export function Tag({ children, onRemove, className = '' }) {
     <span className={`tag ${onRemove ? 'tag--removable' : ''} ${className}`}>
       {children}
       {onRemove && (
-        <span className="tag__remove" onClick={onRemove}>
+        <button type="button" className="tag__remove" onClick={onRemove} aria-label="Xóa">
           <X size={12} />
-        </span>
+        </button>
       )}
     </span>
   );

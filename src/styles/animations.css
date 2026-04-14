@@ -140,17 +140,33 @@
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
-/* Staggered children animation */
+/* Staggered children animation — uses CSS custom property for unlimited children */
 .stagger-children > * {
   opacity: 0;
   animation: fadeInUp 400ms ease forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 60ms);
 }
 
-.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
-.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
-.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
-.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
-.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
-.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
-.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+/* Fallback: auto-assign index via nth-child for up to 20 children */
+.stagger-children > *:nth-child(1) { --stagger-index: 0; }
+.stagger-children > *:nth-child(2) { --stagger-index: 1; }
+.stagger-children > *:nth-child(3) { --stagger-index: 2; }
+.stagger-children > *:nth-child(4) { --stagger-index: 3; }
+.stagger-children > *:nth-child(5) { --stagger-index: 4; }
+.stagger-children > *:nth-child(6) { --stagger-index: 5; }
+.stagger-children > *:nth-child(7) { --stagger-index: 6; }
+.stagger-children > *:nth-child(8) { --stagger-index: 7; }
+.stagger-children > *:nth-child(9) { --stagger-index: 8; }
+.stagger-children > *:nth-child(10) { --stagger-index: 9; }
+.stagger-children > *:nth-child(11) { --stagger-index: 10; }
+.stagger-children > *:nth-child(12) { --stagger-index: 11; }
+.stagger-children > *:nth-child(13) { --stagger-index: 12; }
+.stagger-children > *:nth-child(14) { --stagger-index: 13; }
+.stagger-children > *:nth-child(15) { --stagger-index: 14; }
+.stagger-children > *:nth-child(16) { --stagger-index: 15; }
+.stagger-children > *:nth-child(17) { --stagger-index: 16; }
+.stagger-children > *:nth-child(18) { --stagger-index: 17; }
+.stagger-children > *:nth-child(19) { --stagger-index: 18; }
+.stagger-children > *:nth-child(20) { --stagger-index: 19; }
+/* Children beyond 20 will use max delay of 19*60ms = 1140ms */
+.stagger-children > *:nth-child(n+21) { --stagger-index: 19; }
