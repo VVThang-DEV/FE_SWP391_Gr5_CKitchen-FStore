@@ -3,7 +3,8 @@ import { Search, ChevronUp, ChevronDown, ChevronsLeft, ChevronsRight, ChevronLef
 import { Input } from '../Input/Input';
 import './Table.css';
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 export function DataTable({
   columns,
@@ -15,11 +16,13 @@ export function DataTable({
   emptyTitle = 'Không có dữ liệu',
   emptyDesc = 'Chưa có dữ liệu nào được tạo.',
   className = '',
+  pageSize: defaultPageSize = DEFAULT_PAGE_SIZE,
 }) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
 
   const filteredData = useMemo(() => {
     if (!search.trim()) return data;
@@ -45,8 +48,8 @@ export function DataTable({
     });
   }, [filteredData, sortKey, sortDir]);
 
-  const totalPages = Math.ceil(sortedData.length / PAGE_SIZE);
-  const pagedData = sortedData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.ceil(sortedData.length / pageSize);
+  const pagedData = sortedData.slice((page - 1) * pageSize, page * pageSize);
 
   const handleSort = (accessor) => {
     if (!accessor) return;
@@ -133,9 +136,21 @@ export function DataTable({
 
       {totalPages > 1 && (
         <div className="data-table-pagination">
-          <span className="data-table-pagination__info">
-            Hiển thị {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sortedData.length)} / {sortedData.length}
-          </span>
+          <div className="data-table-pagination__left">
+            <span className="data-table-pagination__info">
+              Hiển thị {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, sortedData.length)} / {sortedData.length}
+            </span>
+            <select
+              className="data-table-pagination__size-select"
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+              aria-label="Số dòng mỗi trang"
+            >
+              {PAGE_SIZE_OPTIONS.map(s => (
+                <option key={s} value={s}>{s} / trang</option>
+              ))}
+            </select>
+          </div>
           <div className="data-table-pagination__controls">
             <button className="data-table-pagination__btn" onClick={() => setPage(1)} disabled={page === 1}>
               <ChevronsLeft size={16} />

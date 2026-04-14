@@ -1,113 +1,42 @@
 import { useState } from "react";
 import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import {
   MapPin,
   Calendar,
   User,
   FileText,
   ChevronRight,
   AlertTriangle,
+  Eye,
+  ArrowRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
-import { Badge, Drawer, Modal, Button } from "../../../components/ui";
+import {
+  Badge,
+  Drawer,
+  Modal,
+  Button,
+  DataTable,
+} from "../../../components/ui";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useData } from "../../../contexts/DataContext";
-import "./KanbanBoard.css";
-
-const COLUMNS = [
-  { id: "pending", label: "Chờ xử lý" },
-  { id: "confirmed", label: "Đã xác nhận" },
-  { id: "producing", label: "Đang sản xuất" },
-  { id: "ready", label: "Sẵn sàng giao" },
-];
+import "./KitchenOrders.css";
 
 const STATUS_ORDER = ["pending", "confirmed", "producing", "ready"];
 
-function OrderCard({ order, isDragging, onClick, formatCurrency, formatDate }) {
-  const handleClick = (e) => {
-    if (!isDragging && onClick) {
-      onClick(order);
-    }
-  };
+const PRIORITY_MAP = {
+  high: { label: "Gấp", variant: "danger" },
+  normal: { label: "Bình thường", variant: "info" },
+  low: { label: "Thấp", variant: "neutral" },
+};
 
-  return (
-    <div
-      className={`order-card ${isDragging ? "order-card--dragging" : ""}`}
-      onClick={handleClick}
-    >
-      <div className="order-card__header">
-        <span className="order-card__id">{order.id}</span>
-        <span
-          className={`order-card__priority order-card__priority--${order.priority}`}
-        >
-          {order.priority === "high"
-            ? "Gấp"
-            : order.priority === "normal"
-              ? "Bình thường"
-              : "Thấp"}
-        </span>
-      </div>
-      <div className="order-card__store">{order.storeName}</div>
-      <div className="order-card__items">
-        {order.items.map((item, i) => (
-          <div key={i}>
-            {item.productName} x {item.quantity}
-          </div>
-        ))}
-      </div>
-      <div className="order-card__footer">
-        <span>{formatDate(order.requestedDate)}</span>
-        <span className="order-card__total">{formatCurrency(order.total)}</span>
-      </div>
-      <div className="order-card__view-hint">
-        Xem chi tiết <ChevronRight size={12} />
-      </div>
-    </div>
-  );
-}
-
-function SortableOrderCard({ order, onCardClick, formatCurrency, formatDate }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: order.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <OrderCard
-        order={order}
-        isDragging={isDragging}
-        onClick={onCardClick}
-        formatCurrency={formatCurrency}
-        formatDate={formatDate}
-      />
-    </div>
-  );
-}
+const statusTabs = [
+  { value: "all", label: "Tất cả" },
+  { value: "pending", label: "Chờ xử lý" },
+  { value: "confirmed", label: "Đã xác nhận" },
+  { value: "producing", label: "Đang sản xuất" },
+  { value: "ready", label: "Sẵn sàng giao" },
+];
 
 function OrderDetailDrawer({
   order,
@@ -235,8 +164,8 @@ function OrderDetailDrawer({
   );
 }
 
-export default function KanbanBoard({
-  title = "Bảng quản lý đơn hàng",
+export default function KitchenOrders({
+  title = "Quản lý đơn hàng",
   subtitle,
 }) {
   const { user } = useAuth();
@@ -264,23 +193,23 @@ export default function KanbanBoard({
       o.status !== "shipping",
   );
 
-  const [activeId, setActiveId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [dragged, setDragged] = useState(false);
   const [pendingChange, setPendingChange] = useState(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor),
-  );
+  const filteredOrders =
+    statusFilter === "all"
+      ? activeOrders
+      : activeOrders.filter((o) => o.status === statusFilter);
 
-  const getOrdersByStatus = (status) =>
-    activeOrders.filter((o) => o.status === status);
+  const getCountForStatus = (status) => {
+    if (status === "all") return activeOrders.length;
+    return activeOrders.filter((o) => o.status === status).length;
+  };
 
-  const findOrderById = (id) => activeOrders.find((o) => o.id === id);
+  // ---- Business logic (unchanged) ----
 
   const createBatchesForOrder = (order) => {
-    // Guard: don't create duplicates
     if (batches.some((b) => b.orderId === order.id)) return;
 
     const maxBatchNum = batches.reduce((max, b) => {
@@ -311,7 +240,9 @@ export default function KanbanBoard({
       `Tạo ${order.items.length} lô SX từ đơn ${order.id}`,
       "production",
     );
-    toast.success(`Đã tạo ${order.items.length} lô sản xuất từ đơn ${order.id}`);
+    toast.success(
+      `Đã tạo ${order.items.length} lô sản xuất từ đơn ${order.id}`,
+    );
   };
 
   const updateBatchesForOrder = (orderId, newOrderStatus) => {
@@ -331,7 +262,6 @@ export default function KanbanBoard({
           endDate: new Date().toISOString(),
         });
 
-        // Auto-deduct kitchen ingredients
         const recipe = recipes.find((r) => r.productId === b.productId);
         if (recipe) {
           recipe.ingredients.forEach((ri) => {
@@ -360,55 +290,22 @@ export default function KanbanBoard({
     }
   };
 
-  const handleCardClick = (order) => {
-    if (!dragged) {
-      setSelectedOrder(order);
-    }
+  // ---- Status advance ----
+
+  const handleAdvanceStatus = (e, order) => {
+    e.stopPropagation();
+    const fromIndex = STATUS_ORDER.indexOf(order.status);
+    const toStatus = STATUS_ORDER[fromIndex + 1];
+    if (!toStatus) return;
+
+    setPendingChange({
+      orderId: order.id,
+      orderLabel: order.id,
+      storeName: order.storeName,
+      fromStatus: order.status,
+      toStatus,
+    });
   };
-
-  const handleDragStart = (event) => {
-    setActiveId(event.active.id);
-    setDragged(true);
-  };
-
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    setActiveId(null);
-    setTimeout(() => setDragged(false), 100);
-
-    if (!over) return;
-
-    const activeOrder = findOrderById(active.id);
-    if (!activeOrder) return;
-
-    const overColumn = COLUMNS.find((col) => col.id === over.id);
-    const overOrder = findOrderById(over.id);
-
-    let targetStatus;
-    if (overColumn) {
-      targetStatus = overColumn.id;
-    } else if (overOrder) {
-      targetStatus = overOrder.status;
-    }
-
-    if (targetStatus && activeOrder.status !== targetStatus) {
-      const fromIndex = STATUS_ORDER.indexOf(activeOrder.status);
-      const toIndex = STATUS_ORDER.indexOf(targetStatus);
-      if (toIndex !== fromIndex + 1) {
-        toast.error("Chỉ được chuyển sang bước tiếp theo");
-        return;
-      }
-      setPendingChange({
-        orderId: active.id,
-        orderLabel: activeOrder.id,
-        storeName: activeOrder.storeName,
-        fromStatus: activeOrder.status,
-        toStatus: targetStatus,
-      });
-    }
-  };
-
-  const handleDragOver = () => {};
 
   const handleConfirmChange = () => {
     if (!pendingChange) return;
@@ -418,7 +315,6 @@ export default function KanbanBoard({
 
     updateOrder(orderId, { status: toStatus });
 
-    // Side effects based on transition
     if (fromStatus === "pending" && toStatus === "confirmed") {
       const order = orders.find((o) => o.id === orderId);
       if (order) createBatchesForOrder(order);
@@ -438,70 +334,186 @@ export default function KanbanBoard({
     setPendingChange(null);
   };
 
-  const activeOrder = activeId ? findOrderById(activeId) : null;
+  // ---- Table columns ----
+
+  const columns = [
+    {
+      header: "Mã đơn",
+      accessor: "id",
+      sortable: true,
+      width: "120px",
+      render: (row) => (
+        <span
+          className="font-mono"
+          style={{ fontWeight: 600, color: "var(--primary)" }}
+        >
+          {row.id}
+        </span>
+      ),
+    },
+    {
+      header: "Cửa hàng",
+      accessor: "storeName",
+      sortable: true,
+    },
+    {
+      header: "Sản phẩm",
+      accessor: "items",
+      render: (row) => {
+        const names = row.items.map((i) => `${i.productName} x${i.quantity}`);
+        const display = names.join(", ");
+        return (
+          <span
+            title={display}
+            style={{
+              maxWidth: 200,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              display: "inline-block",
+            }}
+          >
+            {display}
+          </span>
+        );
+      },
+    },
+    {
+      header: "Ưu tiên",
+      accessor: "priority",
+      sortable: true,
+      width: "110px",
+      render: (row) => {
+        const p = PRIORITY_MAP[row.priority] || PRIORITY_MAP.normal;
+        return (
+          <Badge variant={p.variant} dot>
+            {p.label}
+          </Badge>
+        );
+      },
+    },
+    {
+      header: "Ngày yêu cầu",
+      accessor: "requestedDate",
+      sortable: true,
+      width: "130px",
+      render: (row) => formatDate(row.requestedDate),
+    },
+    {
+      header: "Tổng tiền",
+      accessor: "total",
+      sortable: true,
+      width: "130px",
+      render: (row) => (
+        <span className="font-mono">{formatCurrency(row.total)}</span>
+      ),
+    },
+    {
+      header: "Trạng thái",
+      accessor: "status",
+      sortable: true,
+      width: "140px",
+      render: (row) => (
+        <Badge variant={STATUS_COLORS[row.status]} dot>
+          {STATUS_LABELS[row.status]}
+        </Badge>
+      ),
+    },
+    {
+      header: "Thao tác",
+      accessor: "actions",
+      width: "180px",
+      render: (row) => {
+        const currentIndex = STATUS_ORDER.indexOf(row.status);
+        const canAdvance = currentIndex < STATUS_ORDER.length - 1;
+        const nextLabel = canAdvance
+          ? STATUS_LABELS[STATUS_ORDER[currentIndex + 1]]
+          : null;
+
+        return (
+          <div style={{ display: "flex", gap: "4px" }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={Eye}
+              title="Xem chi tiết"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedOrder(row);
+              }}
+            />
+            {canAdvance && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={ArrowRight}
+                onClick={(e) => handleAdvanceStatus(e, row)}
+                title={`Chuyển sang: ${nextLabel}`}
+              >
+                {nextLabel}
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
 
   const currentSelectedOrder = selectedOrder
-    ? activeOrders.find((o) => o.id === selectedOrder.id)
+    ? orders.find((o) => o.id === selectedOrder.id)
     : null;
 
   return (
     <PageWrapper title={title} subtitle={subtitle}>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
+      {/* Status filter tabs */}
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          marginBottom: "20px",
+          flexWrap: "wrap",
+        }}
       >
-        <div className="kanban">
-          {COLUMNS.map((col) => {
-            const columnOrders = getOrdersByStatus(col.id);
-            return (
-              <div key={col.id} className="kanban-column">
-                <div className="kanban-column__header">
-                  <div className="kanban-column__title">
-                    <span
-                      className={`kanban-column__dot kanban-column__dot--${col.id}`}
-                    />
-                    {col.label}
-                  </div>
-                  <span className="kanban-column__count">
-                    {columnOrders.length}
-                  </span>
-                </div>
-                <SortableContext
-                  id={col.id}
-                  items={columnOrders.map((o) => o.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="kanban-column__body">
-                    {columnOrders.map((order) => (
-                      <SortableOrderCard
-                        key={order.id}
-                        order={order}
-                        onCardClick={handleCardClick}
-                        formatCurrency={formatCurrency}
-                        formatDate={formatDate}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </div>
-            );
-          })}
-        </div>
+        {statusTabs.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setStatusFilter(tab.value)}
+            style={{
+              padding: "6px 16px",
+              borderRadius: "var(--radius-full)",
+              border: "1.5px solid",
+              borderColor:
+                statusFilter === tab.value
+                  ? "var(--primary)"
+                  : "var(--surface-border)",
+              background:
+                statusFilter === tab.value
+                  ? "var(--primary-bg)"
+                  : "var(--surface-card)",
+              color:
+                statusFilter === tab.value
+                  ? "var(--primary)"
+                  : "var(--text-secondary)",
+              fontSize: "13px",
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "all 200ms ease",
+            }}
+          >
+            {tab.label} ({getCountForStatus(tab.value)})
+          </button>
+        ))}
+      </div>
 
-        <DragOverlay>
-          {activeOrder ? (
-            <OrderCard
-              order={activeOrder}
-              isDragging
-              formatCurrency={formatCurrency}
-              formatDate={formatDate}
-            />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      <DataTable
+        columns={columns}
+        data={filteredOrders}
+        searchPlaceholder="Tìm theo mã đơn, cửa hàng..."
+        onRowClick={(row) => setSelectedOrder(row)}
+        emptyTitle="Không có đơn hàng"
+        emptyDesc="Chưa có đơn hàng nào ở trạng thái này."
+      />
 
       <OrderDetailDrawer
         order={currentSelectedOrder}
@@ -519,7 +531,7 @@ export default function KanbanBoard({
         onClose={handleCancelChange}
         title="Xác nhận chuyển trạng thái"
         footer={
-          <div className="kanban-confirm__actions">
+          <div className="order-confirm__actions">
             <Button variant="ghost" onClick={handleCancelChange}>
               Hủy
             </Button>
@@ -530,20 +542,20 @@ export default function KanbanBoard({
         }
       >
         {pendingChange && (
-          <div className="kanban-confirm">
-            <div className="kanban-confirm__icon">
+          <div className="order-confirm">
+            <div className="order-confirm__icon">
               <AlertTriangle size={32} />
             </div>
-            <p className="kanban-confirm__message">
+            <p className="order-confirm__message">
               Bạn có chắc chắn muốn chuyển đơn hàng{" "}
               <strong>{pendingChange.orderLabel}</strong> (
               {pendingChange.storeName})
             </p>
-            <div className="kanban-confirm__status-flow">
+            <div className="order-confirm__status-flow">
               <Badge variant={STATUS_COLORS[pendingChange.fromStatus]} dot>
                 {STATUS_LABELS[pendingChange.fromStatus]}
               </Badge>
-              <ChevronRight size={20} className="kanban-confirm__arrow" />
+              <ChevronRight size={20} className="order-confirm__arrow" />
               <Badge variant={STATUS_COLORS[pendingChange.toStatus]} dot>
                 {STATUS_LABELS[pendingChange.toStatus]}
               </Badge>

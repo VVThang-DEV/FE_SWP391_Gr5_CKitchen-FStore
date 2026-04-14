@@ -69,11 +69,17 @@
 }
 
 .tag__remove {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
   color: var(--text-muted);
   transition: color var(--transition-fast);
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+  font-size: inherit;
 }
 .tag__remove:hover {
   color: var(--danger);

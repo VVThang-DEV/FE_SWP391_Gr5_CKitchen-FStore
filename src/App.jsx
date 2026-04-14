@@ -32,7 +32,7 @@ import StoreInventory from "./features/inventory/store/StoreInventory";
 import StoreSales from "./features/sales/StoreSales";
 
 // Kitchen features
-import KanbanBoard from "./features/orders/kanban/KanbanBoard";
+import KitchenOrders from "./features/orders/kitchen/KitchenOrders";
 import KitchenInventory from "./features/inventory/kitchen/KitchenInventory";
 import ProductionPlan from "./features/production/ProductionPlan";
 import BatchManagement from "./features/production/BatchManagement";
@@ -109,9 +109,9 @@ function AppRoutes() {
           <Route
             path="/kitchen/orders"
             element={
-              <KanbanBoard
-                title="Đơn hàng cần xử lý"
-                subtitle="Kéo thả để cập nhật trạng thái đơn hàng"
+              <KitchenOrders
+                title="Quản lý đơn hàng"
+                subtitle="Xử lý và theo dõi đơn hàng từ các cửa hàng"
               />
             }
           />

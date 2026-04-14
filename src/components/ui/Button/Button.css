@@ -77,8 +77,8 @@
   border-color: var(--danger);
 }
 .btn--danger:hover:not(:disabled) {
-  background: #d4573d;
-  box-shadow: 0 0 20px rgba(231, 111, 81, 0.25);
+  background: #B91C1C;
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.25);
 }
 
 .btn--outline-primary {
