@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Minus, ShoppingCart, Trash2 } from "lucide-react";
 import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
 import { Button, Card, Badge } from "../../../components/ui";
-import { Input, Textarea, Select } from "../../../components/ui";
+import { Input, Textarea } from "../../../components/ui";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useData } from "../../../contexts/DataContext";
 import toast from "react-hot-toast";
@@ -15,8 +15,14 @@ export default function NewOrder() {
   const { products, stores, orders, addOrder, formatCurrency } = useData();
   const [cart, setCart] = useState([]);
   const [notes, setNotes] = useState("");
-  const [priority, setPriority] = useState("normal");
   const [requestedDate, setRequestedDate] = useState("");
+  const priority = useMemo(() => {
+    if (!requestedDate) return "normal";
+    const diffHours = (new Date(requestedDate) - new Date()) / (1000 * 60 * 60);
+    if (diffHours <= 12) return "high";
+    if (diffHours >= 7 * 24) return "low";
+    return "normal";
+  }, [requestedDate]);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [errors, setErrors] = useState({});
 
@@ -94,6 +100,7 @@ export default function NewOrder() {
         productName: item.productName,
         quantity: item.quantity,
         unit: item.unit,
+        unitPrice: item.price,
       })),
       createdBy: user.name,
       total,
@@ -294,18 +301,16 @@ export default function NewOrder() {
                 required
                 error={errors.requestedDate}
               />
-              <div style={{ marginTop: "12px" }}>
-                <Select
-                  label="Mức độ ưu tiên"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                  options={[
-                    { value: "low", label: "Thấp" },
-                    { value: "normal", label: "Bình thường" },
-                    { value: "high", label: "Cao (Gấp)" },
-                  ]}
-                />
-              </div>
+              {requestedDate && (
+                <div style={{ marginTop: "12px" }}>
+                  <p style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-medium)", color: "var(--text-primary)", marginBottom: "6px" }}>
+                    Mức độ ưu tiên (tự động)
+                  </p>
+                  <Badge variant={priority === "high" ? "danger" : priority === "low" ? "neutral" : "info"}>
+                    {priority === "high" ? "Gấp" : priority === "low" ? "Thấp" : "Bình thường"}
+                  </Badge>
+                </div>
+              )}
               <div style={{ marginTop: "12px" }}>
                 <Textarea
                   label="Ghi chú"
