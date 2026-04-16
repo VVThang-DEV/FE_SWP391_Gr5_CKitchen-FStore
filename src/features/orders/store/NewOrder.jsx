@@ -31,7 +31,7 @@ export default function NewOrder() {
       if (existing) {
         return prev.map((item) =>
           item.productId === product.id
-            ? { ...item, quantity: item.quantity + 10 }
+            ? { ...item, quantity: item.quantity + 1 }
             : item,
         );
       }
@@ -40,13 +40,22 @@ export default function NewOrder() {
         {
           productId: product.id,
           productName: product.name,
-          quantity: 10,
+          quantity: 1,
           unit: product.unit,
           price: product.price,
         },
       ];
     });
     if (errors.cart) setErrors((prev) => ({ ...prev, cart: null }));
+  };
+
+  const handleManualQuantityChange = (productId, value) => {
+    const qty = parseInt(value) || 0;
+    setCart((prev) =>
+      prev.map((item) =>
+        item.productId === productId ? { ...item, quantity: Math.max(0, qty) } : item
+      )
+    );
   };
 
   const updateQuantity = (productId, delta) => {
@@ -106,7 +115,7 @@ export default function NewOrder() {
 
   return (
     <PageWrapper
-      title="Tạo đơn hàng mới"
+      title="Yêu cầu nhập hàng"
       subtitle="Chọn sản phẩm và số lượng cần đặt từ bếp trung tâm"
       actions={
         <Button
@@ -248,14 +257,32 @@ export default function NewOrder() {
                     <div className="cart-item__controls">
                       <button
                         className="cart-qty-btn"
-                        onClick={() => updateQuantity(item.productId, -5)}
+                        onClick={() => updateQuantity(item.productId, -1)}
                       >
                         <Minus size={14} />
                       </button>
-                      <span className="cart-qty-val">{item.quantity}</span>
+                      <input
+                        type="number"
+                        className="cart-qty-input"
+                        value={item.quantity}
+                        onChange={(e) => handleManualQuantityChange(item.productId, e.target.value)}
+                        onBlur={(e) => {
+                          if (parseInt(e.target.value) < 1 || isNaN(parseInt(e.target.value))) {
+                            handleManualQuantityChange(item.productId, 1);
+                          }
+                        }}
+                        style={{
+                          width: '44px',
+                          textAlign: 'center',
+                          border: '1px solid var(--surface-border)',
+                          borderRadius: '4px',
+                          fontSize: '13px',
+                          padding: '2px 0'
+                        }}
+                      />
                       <button
                         className="cart-qty-btn"
-                        onClick={() => updateQuantity(item.productId, 5)}
+                        onClick={() => updateQuantity(item.productId, 1)}
                       >
                         <Plus size={14} />
                       </button>

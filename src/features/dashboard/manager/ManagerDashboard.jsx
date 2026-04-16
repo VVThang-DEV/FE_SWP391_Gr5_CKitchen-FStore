@@ -41,7 +41,7 @@ export default function ManagerDashboard() {
     <PageWrapper>
       <div
         className="welcome-banner"
-        style={{ background: "linear-gradient(135deg, #1D3557, #457B9D)" }}
+        style={{ background: "linear-gradient(135deg, #1E40AF, #3B82F6)" }}
       >
         <p className="welcome-banner__greeting">Báo cáo tổng quan,</p>
         <h2 className="welcome-banner__name">{user?.name} 📊</h2>

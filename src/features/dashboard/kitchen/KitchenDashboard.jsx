@@ -31,7 +31,7 @@ export default function KitchenDashboard() {
     <PageWrapper>
       <div
         className="welcome-banner"
-        style={{ background: "linear-gradient(135deg, #9B2335, #E76F51)" }}
+        style={{ background: "linear-gradient(135deg, #0D9488, #14B8A6)" }}
       >
         <p className="welcome-banner__greeting">Xin chào,</p>
         <h2 className="welcome-banner__name">{user?.name} 🍳</h2>

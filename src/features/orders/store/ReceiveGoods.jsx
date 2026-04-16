@@ -205,10 +205,10 @@ export default function ReceiveGoods() {
                           size={20}
                           fill={
                             star <= (feedback[order.id]?.rating || 0)
-                              ? "#E9C46A"
+                              ? "#FBBF24"
                               : "none"
                           }
-                          color="#E9C46A"
+                          color="#FBBF24"
                           onClick={() =>
                             setFeedback((prev) => ({
                               ...prev,
@@ -263,10 +263,10 @@ export default function ReceiveGoods() {
                         fill={
                           s <=
                           (order.qualityRating || feedback[order.id]?.rating)
-                            ? "#E9C46A"
+                            ? "#FBBF24"
                             : "none"
                         }
-                        color="#E9C46A"
+                        color="#FBBF24"
                       />
                     ))}
                   </span>

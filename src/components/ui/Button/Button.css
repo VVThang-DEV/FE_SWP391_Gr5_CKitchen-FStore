@@ -58,7 +58,7 @@
   border-color: var(--accent);
 }
 .btn--accent:hover:not(:disabled) {
-  background: #d4573d;
+  background: #0D9488;
   box-shadow: var(--shadow-glow-accent);
 }
 
@@ -77,8 +77,8 @@
   border-color: var(--danger);
 }
 .btn--danger:hover:not(:disabled) {
-  background: #B91C1C;
-  box-shadow: 0 0 20px rgba(220, 38, 38, 0.25);
+  background: #DC2626;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
 }
 
 .btn--outline-primary {

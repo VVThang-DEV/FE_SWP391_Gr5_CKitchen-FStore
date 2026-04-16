@@ -112,7 +112,7 @@ export default function StoreOrders() {
       subtitle="Quản lý đơn đặt hàng nguyên liệu từ bếp trung tâm"
       actions={
         <Button icon={Plus} onClick={() => navigate("/store/orders/new")}>
-          Tạo đơn mới
+          Yêu cầu nhập hàng
         </Button>
       }
     >
@@ -161,7 +161,7 @@ export default function StoreOrders() {
         data={filtered}
         searchPlaceholder="Tìm theo mã đơn, sản phẩm..."
         emptyTitle="Chưa có đơn hàng"
-        emptyDesc="Bấm 'Tạo đơn mới' để bắt đầu đặt hàng từ bếp trung tâm."
+        emptyDesc="Bấm 'Yêu cầu nhập hàng' để bắt đầu đặt hàng từ bếp trung tâm."
       />
     </PageWrapper>
   );

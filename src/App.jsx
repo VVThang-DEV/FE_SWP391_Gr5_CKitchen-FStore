@@ -75,7 +75,7 @@ function AppRoutes() {
         element={
           isAuthenticated ? (
             <Navigate
-              to={`/${user?.role === "store_staff" ? "store" : user?.role === "kitchen_staff" ? "kitchen" : user?.role === "supply_coordinator" ? "supply" : user?.role === "manager" ? "manager" : "admin"}/dashboard`}
+              to={user?.role === "store_staff" ? "/store/orders/new" : `/${user?.role === "kitchen_staff" ? "kitchen" : user?.role === "supply_coordinator" ? "supply" : user?.role === "manager" ? "manager" : "admin"}/dashboard`}
               replace
             />
           ) : (
