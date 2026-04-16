@@ -24,7 +24,7 @@ export default function SupplyDashboard() {
     <PageWrapper>
       <div
         className="welcome-banner"
-        style={{ background: "linear-gradient(135deg, #8B6914, #F4A261)" }}
+        style={{ background: "linear-gradient(135deg, #D97706, #F59E0B)" }}
       >
         <p className="welcome-banner__greeting">Xin chào,</p>
         <h2 className="welcome-banner__name">{user?.name} 📋</h2>

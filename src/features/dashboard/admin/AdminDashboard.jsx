@@ -7,10 +7,10 @@ import { useData } from "../../../contexts/DataContext";
 import "../Dashboard.css";
 
 const ROLE_COLORS = {
-  store_staff: "#2D6A4F",
-  kitchen_staff: "#E76F51",
-  supply_coordinator: "#F4A261",
-  manager: "#457B9D",
+  store_staff: "#10B981",
+  kitchen_staff: "#14B8A6",
+  supply_coordinator: "#F59E0B",
+  manager: "#3B82F6",
   admin: "#6B7280",
 };
 

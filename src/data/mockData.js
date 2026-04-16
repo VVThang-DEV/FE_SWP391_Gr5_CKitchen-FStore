@@ -143,7 +143,7 @@ export const products = [
     unit: "lít",
     price: 30000,
     cost: 12000,
-    image: null,
+    image: "/images/products/nuoc-mam.png",
   },
   {
     id: "SP009",
@@ -152,7 +152,7 @@ export const products = [
     unit: "lít",
     price: 60000,
     cost: 25000,
-    image: null,
+    image: "/images/products/nuoc-dung-pho.png",
   },
   {
     id: "SP010",
@@ -161,7 +161,7 @@ export const products = [
     unit: "lít",
     price: 55000,
     cost: 23000,
-    image: null,
+    image: "/images/products/sot-bun-bo.png",
   },
 ];
 
