@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
-import { DataTable, Badge } from "../../../components/ui";
-import managerService from "../../../services/managerService";
+import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
+import { DataTable, Badge } from "../../components/ui";
+import managerService from "../../services/managerService";
 
 export default function ManagerInventory() {
   const [kitchenStock, setKitchenStock] = useState([]);

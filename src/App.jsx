@@ -14,43 +14,43 @@ import { DataProvider } from "./contexts/DataContext";
 import AppLayout from "./components/layout/AppLayout/AppLayout";
 
 // Auth
-import LoginPage from "./features/auth/LoginPage";
+import LoginPage from "./pages/auth/LoginPage";
 
 // Dashboards
-import StoreDashboard from "./features/dashboard/store/StoreDashboard";
-import KitchenDashboard from "./features/dashboard/kitchen/KitchenDashboard";
-import SupplyDashboard from "./features/dashboard/supply/SupplyDashboard";
-import ManagerDashboard from "./features/dashboard/manager/ManagerDashboard";
-import AdminDashboard from "./features/dashboard/admin/AdminDashboard";
+import StoreDashboard from "./pages/store/Dashboard";
+import KitchenDashboard from "./pages/kitchen/Dashboard";
+import SupplyDashboard from "./pages/supply/Dashboard";
+import ManagerDashboard from "./pages/manager/Dashboard";
+import AdminDashboard from "./pages/admin/Dashboard";
 
-// Store features
-import StoreOrders from "./features/orders/store/StoreOrders";
-import NewOrder from "./features/orders/store/NewOrder";
-import OrderDetail from "./features/orders/store/OrderDetail";
-import ReceiveGoods from "./features/orders/store/ReceiveGoods";
-import StoreInventory from "./features/inventory/store/StoreInventory";
-import StoreSales from "./features/sales/StoreSales";
+// Store pages
+import StoreOrders from "./pages/store/Orders";
+import NewOrder from "./pages/store/NewOrder";
+import OrderDetail from "./pages/store/OrderDetail";
+import ReceiveGoods from "./pages/store/ReceiveGoods";
+import StoreInventory from "./pages/store/Inventory";
+import StoreSales from "./pages/store/Sales";
 
-// Kitchen features
-import KitchenOrders from "./features/orders/kitchen/KitchenOrders";
-import KitchenInventory from "./features/inventory/kitchen/KitchenInventory";
-import ProductionPlan from "./features/production/ProductionPlan";
-import BatchManagement from "./features/production/BatchManagement";
+// Kitchen pages
+import KitchenOrders from "./pages/kitchen/Orders";
+import KitchenInventory from "./pages/kitchen/Inventory";
+import ProductionPlan from "./pages/kitchen/ProductionPlan";
+import BatchManagement from "./pages/kitchen/BatchManagement";
 
-// Supply features
-import DeliverySchedule from "./features/delivery/DeliverySchedule";
-import IssueManagement from "./features/issues/IssueManagement";
+// Supply pages
+import DeliverySchedule from "./pages/supply/DeliverySchedule";
+import IssueManagement from "./pages/supply/IssueManagement";
 
-// Manager features
-import ProductCatalog from "./features/products/ProductCatalog";
-import ManagerInventory from "./features/inventory/manager/ManagerInventory";
-import RecipeManagement from "./features/recipes/RecipeManagement";
-import Reports from "./features/reports/Reports";
+// Manager pages
+import ProductCatalog from "./pages/manager/ProductCatalog";
+import ManagerInventory from "./pages/manager/Inventory";
+import RecipeManagement from "./pages/manager/RecipeManagement";
+import Reports from "./pages/shared/Reports";
 
-// Admin features
-import UserManagement from "./features/users/UserManagement";
-import StoreManagement from "./features/stores/StoreManagement";
-import SystemConfig from "./features/config/SystemConfig";
+// Admin pages
+import UserManagement from "./pages/admin/UserManagement";
+import StoreManagement from "./pages/admin/StoreManagement";
+import SystemConfig from "./pages/admin/SystemConfig";
 
 // Styles
 import "./styles/global.css";
@@ -93,7 +93,9 @@ function AppRoutes() {
         }
       >
         {/* Store Staff */}
-        <Route element={<ProtectedRoute allowedRoles={["FRANCHISE_STORE_STAFF"]} />}>
+        <Route
+          element={<ProtectedRoute allowedRoles={["FRANCHISE_STORE_STAFF"]} />}
+        >
           <Route path="/store/dashboard" element={<StoreDashboard />} />
           <Route path="/store/orders" element={<StoreOrders />} />
           <Route path="/store/orders/new" element={<NewOrder />} />

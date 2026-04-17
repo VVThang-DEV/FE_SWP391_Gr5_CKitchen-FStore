@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Minus, ShoppingCart, Trash2 } from "lucide-react";
-import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
-import { Button, Card, Badge } from "../../../components/ui";
-import { Input, Textarea } from "../../../components/ui";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useData } from "../../../contexts/DataContext";
+import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
+import { Button, Card, Badge } from "../../components/ui";
+import { Input, Textarea } from "../../components/ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { useData } from "../../contexts/DataContext";
 import toast from "react-hot-toast";
 import "./NewOrder.css";
 

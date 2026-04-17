@@ -22,11 +22,11 @@ import {
   Legend,
 } from "recharts";
 import toast from "react-hot-toast";
-import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
-import { StatCard, Badge } from "../../../components/ui";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useData } from "../../../contexts/DataContext";
-import managerService from "../../../services/managerService";
+import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
+import { StatCard, Badge } from "../../components/ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { useData } from "../../contexts/DataContext";
+import managerService from "../../services/managerService";
 import "../Dashboard.css";
 
 export default function ManagerDashboard() {

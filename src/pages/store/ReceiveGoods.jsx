@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { CheckCircle, Star } from "lucide-react";
 import toast from "react-hot-toast";
-import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
-import { Card, Button, Badge } from "../../../components/ui";
-import { Textarea } from "../../../components/ui";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useData } from "../../../contexts/DataContext";
+import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
+import { Card, Button, Badge } from "../../components/ui";
+import { Textarea } from "../../components/ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { useData } from "../../contexts/DataContext";
 
 export default function ReceiveGoods() {
   const { user } = useAuth();

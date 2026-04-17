@@ -14,10 +14,10 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
-import { StatCard } from "../../../components/ui";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useData } from "../../../contexts/DataContext";
+import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
+import { StatCard } from "../../components/ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { useData } from "../../contexts/DataContext";
 import "../Dashboard.css";
 
 export default function KitchenDashboard() {

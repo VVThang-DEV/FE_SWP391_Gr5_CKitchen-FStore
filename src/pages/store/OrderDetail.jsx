@@ -10,9 +10,9 @@ import {
   Clock,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
-import { Card, Badge, Button } from "../../../components/ui";
-import { useData } from "../../../contexts/DataContext";
+import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
+import { Card, Badge, Button } from "../../components/ui";
+import { useData } from "../../contexts/DataContext";
 import "./OrderDetail.css";
 
 const TIMELINE_STEPS = [

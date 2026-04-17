@@ -10,17 +10,17 @@ import {
   ArrowRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
+import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
 import {
   Badge,
   Drawer,
   Modal,
   Button,
   DataTable,
-} from "../../../components/ui";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useData } from "../../../contexts/DataContext";
-import "./KitchenOrders.css";
+} from "../../components/ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { useData } from "../../contexts/DataContext";
+import "./Orders.css";
 
 const STATUS_ORDER = ["pending", "confirmed", "producing", "ready"];
 

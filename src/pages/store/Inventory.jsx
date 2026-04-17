@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useLocation } from "react-router-dom";
-import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
-import { DataTable, Badge, Button, Modal } from "../../../components/ui";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useData } from "../../../contexts/DataContext";
+import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
+import { DataTable, Badge, Button, Modal } from "../../components/ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { useData } from "../../contexts/DataContext";
 
 export default function StoreInventory() {
   const { user } = useAuth();

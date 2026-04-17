@@ -1,9 +1,9 @@
 import { Users, Store, Activity, Shield } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
-import { StatCard, DataTable, Badge } from "../../../components/ui";
-import { useAuth, ROLE_INFO } from "../../../contexts/AuthContext";
-import { useData } from "../../../contexts/DataContext";
+import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
+import { StatCard, DataTable, Badge } from "../../components/ui";
+import { useAuth, ROLE_INFO } from "../../contexts/AuthContext";
+import { useData } from "../../contexts/DataContext";
 import "../Dashboard.css";
 
 const ROLE_COLORS = {

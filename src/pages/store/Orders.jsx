@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Eye } from "lucide-react";
-import PageWrapper from "../../../components/layout/PageWrapper/PageWrapper";
-import { Button, DataTable, Badge } from "../../../components/ui";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useData } from "../../../contexts/DataContext";
+import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
+import { Button, DataTable, Badge } from "../../components/ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { useData } from "../../contexts/DataContext";
 
 export default function StoreOrders() {
   const navigate = useNavigate();
