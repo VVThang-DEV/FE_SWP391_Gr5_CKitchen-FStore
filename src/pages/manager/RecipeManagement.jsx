@@ -4,7 +4,6 @@ import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
 import { DataTable, Badge, Button, Modal } from "../../components/ui";
 import { Input, Select } from "../../components/ui";
-import { useData } from "../../contexts/DataContext";
 import managerService from "../../services/managerService";
 
 const UNIT_OPTIONS = [
@@ -18,8 +17,6 @@ const UNIT_OPTIONS = [
 const EMPTY_FORM = { productId: "", ingredientId: "", quantity: "", unit: "kg" };
 
 export default function RecipeManagement() {
-  const { ingredients } = useData();
-
   const [recipes, setRecipes] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,10 +46,6 @@ export default function RecipeManagement() {
   }, []);
 
   const productOptions = products.map((p) => ({ value: p.id, label: `${p.name} (${p.id})` }));
-  const ingredientOptions = ingredients.map((i) => ({
-    value: i.id,
-    label: `${i.name} (${i.unit ?? ""})`,
-  }));
 
   const handleOpenNew = () => {
     setEditItem(null);
@@ -233,12 +226,12 @@ export default function RecipeManagement() {
             error={errors.productId}
             disabled={!!editItem}
           />
-          <Select
-            label="Nguyên liệu"
+          <Input
+            label="Mã nguyên liệu"
             required
-            options={ingredientOptions}
             value={form.ingredientId}
             onChange={(e) => setForm((f) => ({ ...f, ingredientId: e.target.value }))}
+            placeholder="Nhập mã nguyên liệu (VD: ING001)"
             error={errors.ingredientId}
             disabled={!!editItem}
           />
