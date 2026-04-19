@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Plus, Edit, Trash2, Eye, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
@@ -23,7 +23,7 @@ const EMPTY_FORM = {
 };
 
 export default function ProductCatalog() {
-  const { ingredients, formatCurrency } = useData();
+  const { formatCurrency } = useData();
 
   const [products, setProducts] = useState([]);
   const [recipes, setRecipes] = useState([]);
@@ -97,10 +97,19 @@ export default function ProductCatalog() {
         { value: "Bán thành phẩm", label: "Bán thành phẩm" },
       ];
 
-  const ingredientOptions = ingredients.map((i) => ({
-    value: i.id,
-    label: `${i.name} (${i.unit})`,
-  }));
+  // Derive known ingredients from loaded recipes (no dedicated BE endpoint)
+  const ingredientOptions = useMemo(() => {
+    const seen = new Map();
+    recipes.forEach((r) => {
+      if (r.ingredientId && !seen.has(r.ingredientId)) {
+        seen.set(r.ingredientId, {
+          value: r.ingredientId,
+          label: r.ingredientName ? `${r.ingredientName} (${r.unit ?? ""})` : r.ingredientId,
+        });
+      }
+    });
+    return Array.from(seen.values());
+  }, [recipes]);
 
   const handleOpenNew = () => {
     setEditProduct(null);
@@ -186,14 +195,18 @@ export default function ProductCatalog() {
   };
 
   const handleOpenRecipe = (product) => {
-    const existing = recipes.find(
-      (r) =>
-        r.productId === product.id || r.productId === product.id?.toString(),
+    const productRecipes = recipes.filter(
+      (r) => r.productId === product.id || r.productId === product.id?.toString(),
     );
     setRecipeItems(
-      existing?.ingredients?.length
-        ? existing.ingredients.map((i) => ({ ...i }))
-        : [{ ingredientId: "", quantity: "", unit: "kg" }],
+      productRecipes.length > 0
+        ? productRecipes.map((r) => ({
+            id: r.id,
+            ingredientId: r.ingredientId,
+            quantity: String(r.quantity),
+            unit: r.unit,
+          }))
+        : [{ id: null, ingredientId: "", quantity: "", unit: "kg" }],
     );
     setShowRecipeModal(product);
   };
@@ -208,29 +221,35 @@ export default function ProductCatalog() {
     }
     setSaving(true);
     try {
-      const existing = recipes.find(
-        (r) =>
-          r.productId === showRecipeModal.id ||
-          r.productId === showRecipeModal.id?.toString(),
+      const results = await Promise.all(
+        validItems.map(async (item) => {
+          if (item.id) {
+            // Update existing entry
+            const updated = await managerService.recipes.update(item.id, {
+              quantity: parseFloat(item.quantity),
+              unit: item.unit,
+            });
+            return updated ?? { ...item, quantity: parseFloat(item.quantity) };
+          } else {
+            // Create new entry
+            return managerService.recipes.create({
+              productId: showRecipeModal.id,
+              ingredientId: item.ingredientId,
+              quantity: parseFloat(item.quantity),
+              unit: item.unit,
+            });
+          }
+        }),
       );
-      const payload = {
-        productId: showRecipeModal.id,
-        ingredients: validItems,
-      };
-      if (existing) {
-        const updated = await managerService.recipes.update(
-          existing.id,
-          payload,
-        );
-        setRecipes((prev) =>
-          prev.map((r) =>
-            r.id === existing.id ? (updated ?? { ...r, ...payload }) : r,
-          ),
-        );
-      } else {
-        const created = await managerService.recipes.create(payload);
-        setRecipes((prev) => [...prev, created]);
-      }
+      // Refresh recipes state: replace entries for this product
+      setRecipes((prev) => [
+        ...prev.filter(
+          (r) =>
+            r.productId !== showRecipeModal.id &&
+            r.productId !== showRecipeModal.id?.toString(),
+        ),
+        ...results.filter(Boolean),
+      ]);
       toast.success(`Đã lưu công thức cho ${showRecipeModal.name}`);
       setShowRecipeModal(null);
     } catch {
@@ -240,13 +259,28 @@ export default function ProductCatalog() {
     }
   };
 
-  const recipe = viewProduct
-    ? recipes.find(
+  // Remove a recipe item: if it has a BE id, delete immediately
+  const handleRemoveRecipeItem = async (idx) => {
+    const item = recipeItems[idx];
+    if (item.id) {
+      try {
+        await managerService.recipes.delete(item.id);
+        setRecipes((prev) => prev.filter((r) => r.id !== item.id));
+      } catch {
+        toast.error("Không thể xóa nguyên liệu");
+        return;
+      }
+    }
+    setRecipeItems((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const productRecipes = viewProduct
+    ? recipes.filter(
         (r) =>
           r.productId === viewProduct.id ||
           r.productId === viewProduct.id?.toString(),
       )
-    : null;
+    : [];
 
   const columns = [
     {
@@ -711,7 +745,7 @@ export default function ProductCatalog() {
               </div>
             )}
 
-            {recipe && (
+            {productRecipes.length > 0 && (
               <div>
                 <h4
                   style={{
@@ -744,33 +778,28 @@ export default function ProductCatalog() {
                     <span>Nguyên liệu</span>
                     <span>Định mức</span>
                   </div>
-                  {recipe.ingredients?.map((ing, i) => {
-                    const ingredient = ingredients.find(
-                      (ig) => ig.id === ing.ingredientId,
-                    );
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          padding: "8px 12px",
-                          borderBottom: "1px solid var(--surface-border)",
-                          fontSize: "14px",
-                        }}
-                      >
-                        <span>{ingredient?.name || ing.ingredientId}</span>
-                        <span className="font-mono">
-                          {ing.quantity} {ing.unit}
-                        </span>
-                      </div>
-                    );
-                  })}
+                  {productRecipes.map((r) => (
+                    <div
+                      key={r.id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "8px 12px",
+                        borderBottom: "1px solid var(--surface-border)",
+                        fontSize: "14px",
+                      }}
+                    >
+                      <span>{r.ingredientName || r.ingredientId}</span>
+                      <span className="font-mono">
+                        {r.quantity} {r.unit}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
-            {!recipe && (
+            {productRecipes.length === 0 && (
               <div
                 style={{
                   padding: "24px",
@@ -861,10 +890,11 @@ export default function ProductCatalog() {
                 alignItems: "start",
               }}
             >
-              <Select
-                label={idx === 0 ? "Nguyên liệu" : ""}
-                options={ingredientOptions}
+              <Input
+                label={idx === 0 ? "Mã nguyên liệu" : ""}
+                placeholder="VD: ING001"
                 value={item.ingredientId}
+                disabled={!!item.id}
                 onChange={(e) =>
                   setRecipeItems((prev) =>
                     prev.map((r, i) =>
@@ -905,15 +935,13 @@ export default function ProductCatalog() {
                   )
                 }
               />
-              {recipeItems.length > 1 && (
+              {(recipeItems.length > 1 || item.id) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   iconOnly
                   icon={Trash2}
-                  onClick={() =>
-                    setRecipeItems((prev) => prev.filter((_, i) => i !== idx))
-                  }
+                  onClick={() => handleRemoveRecipeItem(idx)}
                   style={{ marginTop: idx === 0 ? "24px" : "0" }}
                 />
               )}
