@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -17,10 +17,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   LogOut,
-  Moon,
-  Sun,
   DollarSign,
   PackagePlus,
+  Bell,
+  User,
 } from "lucide-react";
 import { useAuth, ROLES, ROLE_INFO } from "../../../contexts/AuthContext";
 import { useTheme } from "../../../contexts/ThemeContext";
@@ -93,7 +93,9 @@ const NAV_CONFIG = {
       items: [
         { to: "/admin/dashboard", icon: LayoutDashboard, label: "Tổng quan" },
         { to: "/admin/users", icon: Users, label: "Người dùng" },
-        { to: "/admin/stores", icon: Store, label: "Cửa hàng & Bếp" },
+        { to: "/admin/products", icon: Box, label: "Sản phẩm" },
+        { to: "/admin/stores", icon: Store, label: "Cửa hàng Franchise" },
+        { to: "/admin/kitchens", icon: ChefHat, label: "Bếp Trung Tâm" },
         { to: "/admin/config", icon: Settings, label: "Cấu hình" },
         { to: "/admin/reports", icon: BarChart3, label: "Báo cáo hệ thống" },
       ],
@@ -177,29 +179,21 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="sidebar__footer">
-        <div className="sidebar__user">
+        <Link to="/profile" className="sidebar__user" title="Xem hồ sơ cá nhân">
           <div className="sidebar__user-avatar">{initials}</div>
           <div className="sidebar__user-info">
             <div className="sidebar__user-name">{user.name}</div>
             <div className="sidebar__user-role">{roleInfo?.label}</div>
           </div>
-        </div>
+          <User size={14} className="sidebar__user-arrow" style={{ opacity: 0.5, marginLeft: 'auto' }} />
+        </Link>
 
-        <button
-          className="sidebar__toggle"
-          onClick={toggleTheme}
-          aria-label={
-            theme === "light" ? "Chuyển chế độ tối" : "Chuyển chế độ sáng"
-          }
-        >
-          {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
-          <span>{theme === "light" ? "Chế độ tối" : "Chế độ sáng"}</span>
-        </button>
 
         <button
           className="sidebar__toggle"
           onClick={handleLogout}
           aria-label="Đăng xuất"
+          style={{ color: "var(--danger)" }}
         >
           <LogOut size={18} />
           <span>Đăng xuất</span>
