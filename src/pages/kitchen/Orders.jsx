@@ -9,6 +9,7 @@ import {
   Eye,
   ArrowRight,
   UserPlus,
+  Flag,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
@@ -26,7 +27,7 @@ import "./Orders.css";
 // ── Backend enum statuses ───────────────────────────────────────────────────
 const STATUS_LABELS = {
   PENDING: "Chờ tiếp nhận",
-  ASSIGNED: "Đã gán",
+  ASSIGNED: "Đã tiếp nhận",
   IN_PROGRESS: "Đang sản xuất",
   PACKED_WAITING_SHIPPER: "Chờ shipper",
   SHIPPING: "Đang giao",
@@ -80,10 +81,13 @@ function buildNextStatusMap(allowedStatuses) {
   return result;
 }
 
+const PRIORITY_LABELS = { HIGH: "Cao", NORMAL: "Thường", LOW: "Thấp" };
+const PRIORITY_COLORS = { HIGH: "danger", NORMAL: "info", LOW: "neutral" };
+
 const statusTabs = [
   { value: "", label: "Tất cả" },
   { value: "PENDING", label: "Chờ tiếp nhận" },
-  { value: "ASSIGNED", label: "Đã gán" },
+  { value: "ASSIGNED", label: "Đã tiếp nhận" },
   { value: "IN_PROGRESS", label: "Đang sản xuất" },
   { value: "PACKED_WAITING_SHIPPER", label: "Chờ shipper" },
   { value: "SHIPPING", label: "Đang giao" },
@@ -396,14 +400,26 @@ export default function KitchenOrders({
       header: "Ngày yêu cầu",
       accessor: "requestedDate",
       sortable: true,
-      width: "130px",
+      width: "120px",
       render: (row) => formatDate(row.requestedDate),
+    },
+    {
+      header: "Ưu tiên",
+      accessor: "priority",
+      width: "90px",
+      render: (row) =>
+        row.priority ? (
+          <Badge variant={PRIORITY_COLORS[row.priority] || "neutral"}>
+            <Flag size={10} style={{ marginRight: 3 }} />
+            {PRIORITY_LABELS[row.priority] || row.priority}
+          </Badge>
+        ) : "—",
     },
     {
       header: "Trạng thái",
       accessor: "status",
       sortable: true,
-      width: "160px",
+      width: "150px",
       render: (row) => (
         <Badge variant={STATUS_COLORS[row.status] || "neutral"} dot>
           {STATUS_LABELS[row.status] || row.status}
@@ -413,14 +429,20 @@ export default function KitchenOrders({
     {
       header: "Thao tác",
       accessor: "actions",
-      width: "220px",
+      width: "200px",
       render: (row) => {
         const nextStatuses = nextStatusMap[row.status] || [];
+        // PENDING: only show "Tiếp nhận" — kitchen must accept before advancing
         const canAssign = row.status === "PENDING";
-        const primaryNext = nextStatuses.find((s) => s !== "CANCELLED");
+        // For non-PENDING statuses, use the mapped next status
+        const primaryNext = canAssign
+          ? null
+          : nextStatuses.find((s) => s !== "CANCELLED");
+        const canCancel = nextStatuses.includes("CANCELLED");
 
         return (
-          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            {/* View detail */}
             <Button
               variant="ghost"
               size="sm"
@@ -432,6 +454,8 @@ export default function KitchenOrders({
                 handleViewDetail(row);
               }}
             />
+
+            {/* Accept (PENDING only) */}
             {canAssign && (
               <Button
                 variant="accent"
@@ -443,6 +467,8 @@ export default function KitchenOrders({
                 Tiếp nhận
               </Button>
             )}
+
+            {/* Primary status advance */}
             {primaryNext && (
               <Button
                 variant="primary"
@@ -454,12 +480,14 @@ export default function KitchenOrders({
                 {STATUS_LABELS[primaryNext]}
               </Button>
             )}
-            {nextStatuses.includes("CANCELLED") && (
+
+            {/* Cancel — text button matching project convention */}
+            {canCancel && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={(e) => openStatusChange(e, row, "CANCELLED")}
                 title="Hủy đơn"
+                onClick={(e) => openStatusChange(e, row, "CANCELLED")}
                 style={{ color: "var(--danger)" }}
               >
                 Hủy
