@@ -34,7 +34,11 @@ const NAV_CONFIG = {
       items: [
         { to: "/store/dashboard", icon: LayoutDashboard, label: "Tổng quan" },
         { to: "/store/orders", icon: ShoppingCart, label: "Đơn đặt hàng" },
-        { to: "/store/orders/new", icon: ClipboardList, label: "Yêu cầu đặt hàng" },
+        {
+          to: "/store/orders/new",
+          icon: ClipboardList,
+          label: "Yêu cầu đặt hàng",
+        },
         { to: "/store/inventory", icon: Package, label: "Tồn kho" },
         { to: "/store/sales", icon: DollarSign, label: "Ghi nhận bán hàng" },
         { to: "/store/receiving", icon: Receipt, label: "Nhận hàng" },
@@ -65,6 +69,7 @@ const NAV_CONFIG = {
       section: "Điều phối",
       items: [
         { to: "/supply/dashboard", icon: LayoutDashboard, label: "Tổng quan" },
+        { to: "/supply/orders", icon: ClipboardList, label: "Đơn hàng" },
         { to: "/supply/delivery", icon: Truck, label: "Giao hàng" },
         {
           to: "/supply/issues",
