@@ -49,7 +49,7 @@ const initialState = {
   salesRecords: [...mockSalesRecords],
   cart: [],
   systemConfig: {
-    systemName: "Kizuna Restaurant",
+    systemName: "Kizuna Chain",
     email: "support@kizuna.vn",
     timezone: "UTC+7",
     currency: "VND",
