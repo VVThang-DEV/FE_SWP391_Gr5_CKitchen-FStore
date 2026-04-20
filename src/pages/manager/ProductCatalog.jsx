@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Plus, Edit, Trash2, Eye, Upload } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Upload, CheckSquare, Square } from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
 import { DataTable, Badge, Button, Modal } from "../../components/ui";
 import { Input, Select } from "../../components/ui";
 import managerService from "../../services/managerService";
+import { useData } from "../../contexts/DataContext";
 
 function formatCurrency(v) {
   if (v == null) return "—";
@@ -30,10 +31,14 @@ const EMPTY_FORM = {
 };
 
 export default function ProductCatalog() {
+  const { addAuditLog } = useData();
+
   const [products, setProducts] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
@@ -176,6 +181,7 @@ export default function ProductCatalog() {
           editProduct.id,
           fields,
         );
+        addAuditLog("product_updated", null, `Cập nhật sản phẩm ${fields.name}`, "products");
         setProducts((prev) =>
           prev.map((p) =>
             p.id === editProduct.id ? (updated ?? { ...p, ...fields }) : p,
@@ -184,6 +190,7 @@ export default function ProductCatalog() {
         toast.success(`Đã cập nhật sản phẩm ${form.name}`);
       } else {
         const created = await managerService.products.create(fields);
+        addAuditLog("product_created", null, `Tạo sản phẩm mới ${fields.name}`, "products");
         setProducts((prev) => [...prev, created]);
         toast.success(`Đã tạo sản phẩm ${form.name}`);
       }
@@ -196,18 +203,41 @@ export default function ProductCatalog() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!confirmDelete) return;
     setSaving(true);
     try {
-      await managerService.products.delete(confirmDelete.id);
-      setProducts((prev) => prev.filter((p) => p.id !== confirmDelete.id));
-      toast.success(`Đã xóa sản phẩm ${confirmDelete.name}`);
+      if (isBulkDelete) {
+        await Promise.all(selectedIds.map(id => managerService.products.delete(id)));
+        addAuditLog("product_deleted", null, `Đã xóa hàng loạt ${selectedIds.length} sản phẩm`, "products");
+        setProducts(prev => prev.filter(p => !selectedIds.includes(p.id)));
+        toast.success(`Đã xóa ${selectedIds.length} sản phẩm`);
+        setSelectedIds([]);
+      } else {
+        await managerService.products.delete(confirmDelete.id);
+        addAuditLog("product_deleted", null, `Đã xóa sản phẩm ${confirmDelete.name}`, "products");
+        setProducts((prev) => prev.filter((p) => p.id !== confirmDelete.id));
+        toast.success(`Đã xóa sản phẩm ${confirmDelete.name}`);
+      }
       setConfirmDelete(null);
+      setIsBulkDelete(false);
     } catch {
-      toast.error("Xóa sản phẩm thất bại");
+      toast.error("Xóa thất bại");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === products.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(products.map(p => p.id));
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
   };
 
   const handleOpenRecipe = (product) => {
@@ -300,6 +330,19 @@ export default function ProductCatalog() {
     : [];
 
   const columns = [
+    {
+      header: (
+        <div onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ cursor: "pointer" }}>
+          {selectedIds.length === products.length && products.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
+        </div>
+      ),
+      width: "40px",
+      render: (r) => (
+        <div onClick={(e) => { e.stopPropagation(); handleSelectOne(r.id); }} style={{ cursor: "pointer" }}>
+          {selectedIds.includes(r.id) ? <CheckSquare size={18} color="var(--primary)" /> : <Square size={18} />}
+        </div>
+      )
+    },
     {
       header: "",
       width: "48px",
@@ -445,9 +488,23 @@ export default function ProductCatalog() {
       title="Danh mục sản phẩm"
       subtitle="Quản lý sản phẩm, công thức và định mức nguyên liệu"
       actions={
-        <Button icon={Plus} onClick={handleOpenNew}>
-          Thêm sản phẩm
-        </Button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          {selectedIds.length > 0 && (
+            <Button
+              variant="danger"
+              icon={Trash2}
+              onClick={() => {
+                setIsBulkDelete(true);
+                setConfirmDelete({ name: `${selectedIds.length} sản phẩm đã chọn` });
+              }}
+            >
+              Xóa {selectedIds.length} mục
+            </Button>
+          )}
+          <Button icon={Plus} onClick={handleOpenNew}>
+            Thêm sản phẩm
+          </Button>
+        </div>
       }
     >
       <DataTable
