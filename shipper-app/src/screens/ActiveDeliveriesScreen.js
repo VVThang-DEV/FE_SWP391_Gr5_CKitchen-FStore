@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+﻿import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,39 +10,38 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import shipperService from "../services/shipperService";
+import T from "../theme";
 
 function formatDateTime(d) {
-  if (!d) return "—";
-  return new Date(d).toLocaleString("vi-VN");
+  if (!d) return "-";
+  return new Date(d).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-const STATUS_LABEL = {
-  SHIPPING: "Đang giao",
-  WAITING_CONFIRM: "Chờ cửa hàng xác nhận",
-  DELIVERED: "Đã giao",
-};
-
-const STATUS_COLOR = {
-  SHIPPING: "#FF6B35",
-  WAITING_CONFIRM: "#2196F3",
-  DELIVERED: "#4CAF50",
+const STATUS_META = {
+  SHIPPING:        { label: "Đang giao",        color: T.colors.accent,  dot: "🟠" },
+  WAITING_CONFIRM: { label: "Chờ xác nhận",    color: T.colors.info,    dot: "🔵" },
+  DELIVERED:       { label: "Đã giao",         color: T.colors.success, dot: "🟢" },
 };
 
 export default function ActiveDeliveriesScreen() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Mark success modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const fetch = useCallback(async (isRefresh = false) => {
+  const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
@@ -56,86 +55,106 @@ export default function ActiveDeliveriesScreen() {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetch();
-    }, [fetch]),
-  );
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const openMarkSuccess = (item) => {
+  const openConfirm = (item) => {
     setSelectedDelivery(item);
     setNotes("");
     setModalVisible(true);
   };
 
   const handleMarkSuccess = async () => {
-    if (!selectedDelivery?.deliveryId && !selectedDelivery?.id) return;
-    const deliveryId = selectedDelivery.deliveryId || selectedDelivery.id;
+    const deliveryId = selectedDelivery?.deliveryId || selectedDelivery?.id;
+    if (!deliveryId) return;
     setSubmitting(true);
     try {
       await shipperService.markSuccess(deliveryId, notes);
       setModalVisible(false);
-      Alert.alert("✅ Thành công", "Đã báo giao hàng. Chờ cửa hàng xác nhận.");
-      fetch();
+      Alert.alert("Giao hàng thành công", "Đang chờ cửa hàng xác nhận.");
+      load();
     } catch (err) {
-      const msg = err.response?.data?.message || "Cập nhật thất bại";
-      Alert.alert("Lỗi", msg);
+      Alert.alert("Lỗi", err.response?.data?.message || "Cập nhật thất bại");
     } finally {
       setSubmitting(false);
     }
   };
 
   const renderItem = ({ item }) => {
+    const meta = STATUS_META[item.deliveryStatus] ?? { label: item.deliveryStatus, color: T.colors.textMuted, dot: "⚪" };
     const canMarkSuccess = item.deliveryStatus === "SHIPPING";
-    const statusColor = STATUS_COLOR[item.deliveryStatus] || "#888";
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.orderId}>{item.id || item.orderId}</Text>
-          <View style={[styles.badge, { backgroundColor: statusColor + "20" }]}>
-            <Text style={[styles.badgeText, { color: statusColor }]}>
-              {STATUS_LABEL[item.deliveryStatus] ||
-                item.deliveryStatus ||
-                "Đang giao"}
+        <View style={[styles.cardAccent, { backgroundColor: meta.color }]} />
+        <View style={styles.cardBody}>
+          {/* Header */}
+          <View style={styles.cardHeader}>
+            <Text style={styles.orderId}>#{item.id || item.orderId}</Text>
+            <View style={[styles.badge, { backgroundColor: meta.color + "18", borderColor: meta.color + "40" }]}>
+              <Text style={[styles.badgeText, { color: meta.color }]}>
+                {meta.dot} {meta.label}
+              </Text>
+            </View>
+          </View>
+
+          {/* Delivery ID */}
+          {item.deliveryId && (
+            <View style={styles.metaRow}>
+              <Text style={styles.metaIcon}>{""}</Text>
+              <Text style={styles.metaText}>Vận đơn: {item.deliveryId}</Text>
+            </View>
+          )}
+
+          {/* Store */}
+          <View style={styles.metaRow}>
+            <Text style={styles.metaIcon}>{""}</Text>
+            <Text style={styles.metaText} numberOfLines={1}>
+              {item.storeName || "-"}
             </Text>
           </View>
+
+          {/* Pickup time */}
+          {item.pickedUpAt && (
+            <View style={styles.metaRow}>
+              <Text style={styles.metaIcon}>{""}</Text>
+              <Text style={styles.metaText}>
+                Nhận lúc: {formatDateTime(item.pickedUpAt)}
+              </Text>
+            </View>
+          )}
+
+          {/* Divider + CTA */}
+          {canMarkSuccess && (
+            <>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.doneBtn}
+                onPress={() => openConfirm(item)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.doneBtnText}>✅  Xác nhận đã giao hàng</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
-
-        {item.deliveryId && (
-          <Text style={styles.meta}>🆔 Mã vận đơn: {item.deliveryId}</Text>
-        )}
-        <Text style={styles.storeName}>🏪 {item.storeName || "—"}</Text>
-        {item.pickedUpAt && (
-          <Text style={styles.meta}>
-            ⏰ Nhận lúc: {formatDateTime(item.pickedUpAt)}
-          </Text>
-        )}
-
-        {canMarkSuccess && (
-          <TouchableOpacity
-            style={styles.doneBtn}
-            onPress={() => openMarkSuccess(item)}
-          >
-            <Text style={styles.doneBtnText}>✅ Đã giao hàng</Text>
-          </TouchableOpacity>
-        )}
       </View>
     );
   };
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={T.colors.primaryDark} />
+
       <View style={styles.header}>
+        <Text style={styles.headerLabel}>CKITCHEN SHIPPER</Text>
         <Text style={styles.headerTitle}>Đơn đang giao</Text>
       </View>
 
       {loading ? (
-        <ActivityIndicator
-          style={{ marginTop: 40 }}
-          size="large"
-          color="#FF6B35"
-        />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={T.colors.primary} />
+          <Text style={styles.loadingText}>Đang tải…</Text>
+        </View>
       ) : (
         <FlatList
           data={orders}
@@ -145,51 +164,63 @@ export default function ActiveDeliveriesScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => fetch(true)}
-              colors={["#FF6B35"]}
+              onRefresh={() => load(true)}
+              colors={[T.colors.primary]}
+              tintColor={T.colors.primary}
             />
           }
           ListEmptyComponent={
-            <Text style={styles.empty}>Không có đơn nào đang giao</Text>
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyIcon}>{""}</Text>
+              <Text style={styles.emptyTitle}>Không có đơn nào đang giao</Text>
+              <Text style={styles.emptySub}>Quét QR để nhận đơn mới</Text>
+            </View>
           }
         />
       )}
 
-      {/* Mark success modal */}
+      {/* Bottom-sheet confirm modal */}
       <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Xác nhận đã giao hàng</Text>
-            <Text style={styles.modalSub}>
-              Đơn: {selectedDelivery?.id || selectedDelivery?.orderId}
+        <View style={styles.overlay}>
+          <TouchableOpacity style={styles.overlayBg} onPress={() => setModalVisible(false)} />
+          <View style={styles.sheet}>
+            {/* Handle bar */}
+            <View style={styles.handle} />
+
+            <Text style={styles.sheetTitle}>Xác nhận đã giao hàng</Text>
+            <Text style={styles.sheetSub}>
+              Đơn hàng:{" "}
+              <Text style={{ fontWeight: "700", color: T.colors.textDark }}>
+                #{selectedDelivery?.id || selectedDelivery?.orderId}
+              </Text>
             </Text>
+
             <TextInput
               style={styles.notesInput}
-              placeholder="Ghi chú (tùy chọn)"
+              placeholder="Ghi chú giao hàng (tùy chọn)…"
+              placeholderTextColor={T.colors.textMuted}
               multiline
               numberOfLines={3}
               value={notes}
               onChangeText={setNotes}
             />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.cancelBtnText}>Hủy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmBtn, submitting && styles.btnDisabled]}
-                onPress={handleMarkSuccess}
-                disabled={submitting}
-              >
-                {submitting ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.confirmBtnText}>Xác nhận</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+
+            <TouchableOpacity
+              style={[styles.confirmBtn, submitting && { opacity: 0.6 }]}
+              onPress={handleMarkSuccess}
+              disabled={submitting}
+              activeOpacity={0.85}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.confirmBtnText}>✅  Xác nhận giao thành công</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
+              <Text style={styles.cancelBtnText}>Huỷ</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -198,84 +229,139 @@ export default function ActiveDeliveriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5" },
+  container: { flex: 1, backgroundColor: T.colors.background },
+
+  // Header
   header: {
-    backgroundColor: "#FF6B35",
-    padding: 16,
+    backgroundColor: T.colors.primaryDark,
     paddingTop: 52,
+    paddingBottom: 18,
+    paddingHorizontal: 20,
   },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
-  list: { padding: 16 },
+  headerLabel: {
+    color: "rgba(255,255,255,0.50)",
+    fontSize: 10,
+    letterSpacing: 1.2,
+    marginBottom: 3,
+  },
+  headerTitle: { color: "#fff", fontSize: 20, fontWeight: "800" },
+
+  // List
+  list: { padding: 16, paddingBottom: 32 },
+
+  // Card
   card: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: T.radius.lg,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 2,
+    flexDirection: "row",
+    overflow: "hidden",
+    ...T.shadows.card,
   },
+  cardAccent: { width: 5 },
+  cardBody: { flex: 1, padding: 14 },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  orderId: { fontSize: 15, fontWeight: "700", color: "#333" },
-  badge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
-  badgeText: { fontSize: 12, fontWeight: "600" },
-  storeName: { fontSize: 14, color: "#333", marginBottom: 4 },
-  meta: { fontSize: 13, color: "#666", marginBottom: 2 },
-  doneBtn: {
-    backgroundColor: "#4CAF50",
-    borderRadius: 10,
-    padding: 12,
     alignItems: "center",
-    marginTop: 12,
+    marginBottom: 10,
   },
-  doneBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  empty: { textAlign: "center", color: "#999", fontSize: 14, marginTop: 60 },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
+  orderId: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: T.colors.textDark,
+    letterSpacing: 0.3,
   },
-  modalCard: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-  },
-  modalTitle: { fontSize: 17, fontWeight: "700", marginBottom: 4 },
-  modalSub: { fontSize: 13, color: "#666", marginBottom: 16 },
-  notesInput: {
+  badge: {
+    borderRadius: T.radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
+  },
+  badgeText: { fontSize: 11, fontWeight: "700" },
+
+  metaRow: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
+  metaIcon: { fontSize: 13, marginRight: 8, width: 18 },
+  metaText: { fontSize: 13, color: T.colors.textMid, flex: 1 },
+
+  divider: {
+    height: 1,
+    backgroundColor: T.colors.surfaceBorder,
+    marginVertical: 12,
+  },
+  doneBtn: {
+    backgroundColor: T.colors.accent,
+    borderRadius: T.radius.md,
+    padding: 13,
+    alignItems: "center",
+    ...T.shadows.fab,
+  },
+  doneBtnText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+
+  // States
+  centered: { flex: 1, alignItems: "center", justifyContent: "center" },
+  loadingText: { color: T.colors.textMuted, marginTop: 12, fontSize: 13 },
+  emptyWrap: { alignItems: "center", paddingTop: 80, paddingHorizontal: 32 },
+  emptyIcon: { fontSize: 52, marginBottom: 14 },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: T.colors.textDark, marginBottom: 6 },
+  emptySub: { fontSize: 13, color: T.colors.textMuted, textAlign: "center" },
+
+  // Modal
+  overlay: { flex: 1, justifyContent: "flex-end" },
+  overlayBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(26,67,50,0.45)",
+  },
+  sheet: {
+    backgroundColor: T.colors.surface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: 36,
+    ...T.shadows.card,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: T.colors.surfaceBorder,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: T.colors.textDark,
+    marginBottom: 4,
+  },
+  sheetSub: { fontSize: 13, color: T.colors.textMuted, marginBottom: 18 },
+  notesInput: {
+    borderWidth: 1.5,
+    borderColor: T.colors.surfaceBorder,
+    borderRadius: T.radius.md,
     padding: 12,
     fontSize: 14,
     textAlignVertical: "top",
-    backgroundColor: "#fafafa",
+    backgroundColor: "#fff",
+    color: T.colors.textDark,
     marginBottom: 16,
+    minHeight: 80,
   },
-  modalActions: { flexDirection: "row", gap: 12 },
-  cancelBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    padding: 14,
-    alignItems: "center",
-  },
-  cancelBtnText: { color: "#555", fontWeight: "600" },
   confirmBtn: {
-    flex: 1,
-    backgroundColor: "#FF6B35",
-    borderRadius: 10,
+    backgroundColor: T.colors.accent,
+    borderRadius: T.radius.lg,
+    padding: 16,
+    alignItems: "center",
+    marginBottom: 10,
+    ...T.shadows.fab,
+  },
+  confirmBtnText: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  cancelBtn: {
+    borderWidth: 1.5,
+    borderColor: T.colors.surfaceBorder,
+    borderRadius: T.radius.lg,
     padding: 14,
     alignItems: "center",
   },
-  confirmBtnText: { color: "#fff", fontWeight: "700" },
-  btnDisabled: { opacity: 0.6 },
+  cancelBtnText: { color: T.colors.textMid, fontWeight: "600", fontSize: 14 },
 });
