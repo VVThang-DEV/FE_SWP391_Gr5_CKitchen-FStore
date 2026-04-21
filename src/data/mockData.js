@@ -374,9 +374,9 @@ const ORDER_STATUSES = [
 
 export const STATUS_LABELS = {
   pending: "Chờ xử lý",
-  confirmed: "Đã xác nhận",
-  producing: "Đang sản xuất",
-  ready: "Sẵn sàng giao",
+  assigned: "Đã xác nhận",
+  in_progress: "Đang sản xuất",
+  packed_waiting_shipper: "Sẵn sàng giao",
   shipping: "Đang giao hàng",
   delivered: "Đã giao",
   cancelled: "Đã hủy",
@@ -384,9 +384,9 @@ export const STATUS_LABELS = {
 
 export const STATUS_COLORS = {
   pending: "warning",
-  confirmed: "info",
-  producing: "accent",
-  ready: "primary",
+  assigned: "info",
+  in_progress: "accent",
+  packed_waiting_shipper: "primary",
   shipping: "info",
   delivered: "success",
   cancelled: "danger",

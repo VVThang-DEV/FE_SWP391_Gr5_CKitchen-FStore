@@ -1,11 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  Plus,
-  Calendar,
-  User,
-  Package,
-  Clock,
-} from "lucide-react";
+import { Plus, Calendar, User, Package, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
 import { Card, Badge, Button } from "../../components/ui";
@@ -50,20 +44,30 @@ export default function ProductionPlan() {
     try {
       const data = await kitchenService.getProductionPlans({ page, size: 20 });
       setPlans(data.content || []);
-      setTotalPages(data.totalPages || 0);
+      setTotalPages(data.page?.totalPages ?? data.totalPages ?? 0);
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Không thể tải kế hoạch sản xuất");
+      toast.error(
+        err.response?.data?.message || "Không thể tải kế hoạch sản xuất",
+      );
     } finally {
       setLoading(false);
     }
   }, [page]);
 
-  useEffect(() => { fetchPlans(); }, [fetchPlans]);
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
 
   // ── Create ────────────────────────────────────────────────────────────────
   const handleOpenNew = () => {
-    setForm({ productId: "", quantity: "", startDate: "", endDate: "", notes: "" });
+    setForm({
+      productId: "",
+      quantity: "",
+      startDate: "",
+      endDate: "",
+      notes: "",
+    });
     setErrors({});
     setShowModal(true);
   };
@@ -71,7 +75,8 @@ export default function ProductionPlan() {
   const validate = () => {
     const errs = {};
     if (!form.productId.trim()) errs.productId = "Vui lòng nhập mã sản phẩm";
-    if (!form.quantity || parseInt(form.quantity) <= 0) errs.quantity = "Vui lòng nhập số lượng hợp lệ";
+    if (!form.quantity || parseInt(form.quantity) <= 0)
+      errs.quantity = "Vui lòng nhập số lượng hợp lệ";
     if (!form.startDate) errs.startDate = "Vui lòng chọn ngày bắt đầu";
     if (!form.endDate) errs.endDate = "Vui lòng chọn ngày kết thúc";
     setErrors(errs);
@@ -113,13 +118,32 @@ export default function ProductionPlan() {
       <div className="production-layout">
         <div className="production-list">
           {loading && plans.length === 0 && (
-            <p style={{ color: "var(--text-muted)", padding: "20px", textAlign: "center" }}>Đang tải...</p>
+            <p
+              style={{
+                color: "var(--text-muted)",
+                padding: "20px",
+                textAlign: "center",
+              }}
+            >
+              Đang tải...
+            </p>
           )}
           {!loading && plans.length === 0 && (
-            <p style={{ color: "var(--text-muted)", padding: "20px", textAlign: "center" }}>Chưa có kế hoạch sản xuất nào.</p>
+            <p
+              style={{
+                color: "var(--text-muted)",
+                padding: "20px",
+                textAlign: "center",
+              }}
+            >
+              Chưa có kế hoạch sản xuất nào.
+            </p>
           )}
           {plans.map((plan) => {
-            const config = STATUS_CONFIG[plan.status] || { label: plan.status, variant: "neutral" };
+            const config = STATUS_CONFIG[plan.status] || {
+              label: plan.status,
+              variant: "neutral",
+            };
             return (
               <div
                 key={plan.id}
@@ -127,16 +151,30 @@ export default function ProductionPlan() {
                 onClick={() => setSelectedPlan(plan)}
               >
                 <div className="production-card__header">
-                  <span className="production-card__id font-mono">{plan.id}</span>
-                  <Badge variant={config.variant} dot>{config.label}</Badge>
+                  <span className="production-card__id font-mono">
+                    {plan.id}
+                  </span>
+                  <Badge variant={config.variant} dot>
+                    {config.label}
+                  </Badge>
                 </div>
-                <h4 className="production-card__name">{plan.productName || plan.productId}</h4>
+                <h4 className="production-card__name">
+                  {plan.productName || plan.productId}
+                </h4>
                 <div className="production-card__meta">
-                  <span><Package size={14} /> {plan.quantity} {plan.unit || "phần"}</span>
-                  {plan.staff && <span><User size={14} /> {plan.staff}</span>}
+                  <span>
+                    <Package size={14} /> {plan.quantity} {plan.unit || "phần"}
+                  </span>
+                  {plan.staff && (
+                    <span>
+                      <User size={14} /> {plan.staff}
+                    </span>
+                  )}
                 </div>
                 <div className="production-card__meta">
-                  <span><Clock size={14} /> {formatDateTime(plan.startDate)}</span>
+                  <span>
+                    <Clock size={14} /> {formatDateTime(plan.startDate)}
+                  </span>
                 </div>
               </div>
             );
@@ -147,27 +185,95 @@ export default function ProductionPlan() {
         {selectedPlan && (
           <div className="production-detail">
             <Card>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-                <h3 style={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: "var(--text-lg)" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  marginBottom: "16px",
+                }}
+              >
+                <h3
+                  style={{
+                    fontFamily: "var(--font-heading)",
+                    fontWeight: 600,
+                    fontSize: "var(--text-lg)",
+                  }}
+                >
                   {selectedPlan.productName || selectedPlan.productId}
                 </h3>
-                <Badge variant={(STATUS_CONFIG[selectedPlan.status] || { variant: "neutral" }).variant} dot>
-                  {(STATUS_CONFIG[selectedPlan.status] || { label: selectedPlan.status }).label}
+                <Badge
+                  variant={
+                    (
+                      STATUS_CONFIG[selectedPlan.status] || {
+                        variant: "neutral",
+                      }
+                    ).variant
+                  }
+                  dot
+                >
+                  {
+                    (
+                      STATUS_CONFIG[selectedPlan.status] || {
+                        label: selectedPlan.status,
+                      }
+                    ).label
+                  }
                 </Badge>
               </div>
 
               <div className="production-detail__info">
-                <div className="production-detail__row"><span>Mã KH:</span><span className="font-mono">{selectedPlan.id}</span></div>
-                <div className="production-detail__row"><span>Sản phẩm:</span><span>{selectedPlan.productName || selectedPlan.productId}</span></div>
-                <div className="production-detail__row"><span>Số lượng:</span><span>{selectedPlan.quantity} {selectedPlan.unit || "phần"}</span></div>
-                {selectedPlan.staff && <div className="production-detail__row"><span>Phụ trách:</span><span>{selectedPlan.staff}</span></div>}
-                <div className="production-detail__row"><span>Bắt đầu:</span><span>{formatDateTime(selectedPlan.startDate)}</span></div>
-                {selectedPlan.endDate && <div className="production-detail__row"><span>Kết thúc:</span><span>{formatDateTime(selectedPlan.endDate)}</span></div>}
-                {selectedPlan.createdAt && <div className="production-detail__row"><span>Tạo lúc:</span><span>{formatDateTime(selectedPlan.createdAt)}</span></div>}
+                <div className="production-detail__row">
+                  <span>Mã KH:</span>
+                  <span className="font-mono">{selectedPlan.id}</span>
+                </div>
+                <div className="production-detail__row">
+                  <span>Sản phẩm:</span>
+                  <span>
+                    {selectedPlan.productName || selectedPlan.productId}
+                  </span>
+                </div>
+                <div className="production-detail__row">
+                  <span>Số lượng:</span>
+                  <span>
+                    {selectedPlan.quantity} {selectedPlan.unit || "phần"}
+                  </span>
+                </div>
+                {selectedPlan.staff && (
+                  <div className="production-detail__row">
+                    <span>Phụ trách:</span>
+                    <span>{selectedPlan.staff}</span>
+                  </div>
+                )}
+                <div className="production-detail__row">
+                  <span>Bắt đầu:</span>
+                  <span>{formatDateTime(selectedPlan.startDate)}</span>
+                </div>
+                {selectedPlan.endDate && (
+                  <div className="production-detail__row">
+                    <span>Kết thúc:</span>
+                    <span>{formatDateTime(selectedPlan.endDate)}</span>
+                  </div>
+                )}
+                {selectedPlan.createdAt && (
+                  <div className="production-detail__row">
+                    <span>Tạo lúc:</span>
+                    <span>{formatDateTime(selectedPlan.createdAt)}</span>
+                  </div>
+                )}
               </div>
 
               {selectedPlan.notes && (
-                <div style={{ marginTop: "16px", padding: "12px", background: "var(--surface)", borderRadius: "var(--radius-md)", fontSize: "13px", color: "var(--text-secondary)" }}>
+                <div
+                  style={{
+                    marginTop: "16px",
+                    padding: "12px",
+                    background: "var(--surface)",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: "13px",
+                    color: "var(--text-secondary)",
+                  }}
+                >
                   💬 {selectedPlan.notes}
                 </div>
               )}
@@ -178,10 +284,39 @@ export default function ProductionPlan() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "16px" }}>
-          <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>← Trước</Button>
-          <span style={{ lineHeight: "32px", fontSize: "13px", color: "var(--text-secondary)" }}>Trang {page + 1} / {totalPages}</span>
-          <Button variant="ghost" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>Sau →</Button>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "8px",
+            marginTop: "16px",
+          }}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page === 0}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            ← Trước
+          </Button>
+          <span
+            style={{
+              lineHeight: "32px",
+              fontSize: "13px",
+              color: "var(--text-secondary)",
+            }}
+          >
+            Trang {page + 1} / {totalPages}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Sau →
+          </Button>
         </div>
       )}
 
@@ -193,8 +328,12 @@ export default function ProductionPlan() {
         size="lg"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>Hủy</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? "Đang tạo..." : "Tạo kế hoạch"}</Button>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>
+              Hủy
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Đang tạo..." : "Tạo kế hoạch"}
+            </Button>
           </>
         }
       >
@@ -204,7 +343,9 @@ export default function ProductionPlan() {
             required
             placeholder="VD: PROD-001"
             value={form.productId}
-            onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, productId: e.target.value }))
+            }
             error={errors.productId}
           />
           <Input
@@ -213,16 +354,26 @@ export default function ProductionPlan() {
             type="number"
             placeholder="100"
             value={form.quantity}
-            onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, quantity: e.target.value }))
+            }
             error={errors.quantity}
           />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "16px",
+            }}
+          >
             <Input
               label="Ngày bắt đầu"
               required
               type="datetime-local"
               value={form.startDate}
-              onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, startDate: e.target.value }))
+              }
               error={errors.startDate}
             />
             <Input
@@ -230,7 +381,9 @@ export default function ProductionPlan() {
               required
               type="datetime-local"
               value={form.endDate}
-              onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, endDate: e.target.value }))
+              }
               error={errors.endDate}
             />
           </div>

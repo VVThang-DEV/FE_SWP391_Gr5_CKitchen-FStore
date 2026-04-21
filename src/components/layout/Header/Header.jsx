@@ -1,32 +1,51 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Bell, Search, ChevronRight, ShoppingCart, ChefHat, AlertTriangle, CheckCircle, Truck, Package, Menu, Moon, Sun, Users, Box } from 'lucide-react';
-import { useData } from '../../../contexts/DataContext';
-import { useAuth, ROLE_INFO } from '../../../contexts/AuthContext';
-import { useTheme } from '../../../contexts/ThemeContext';
-import './Header.css';
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useLocation, Link, useNavigate } from "react-router-dom";
+import {
+  Bell,
+  Search,
+  ChevronRight,
+  ShoppingCart,
+  ChefHat,
+  AlertTriangle,
+  CheckCircle,
+  Truck,
+  Package,
+  Menu,
+  Moon,
+  Sun,
+  Users,
+  Box,
+} from "lucide-react";
+import { useData } from "../../../contexts/DataContext";
+import { useAuth, ROLE_INFO } from "../../../contexts/AuthContext";
+import { useTheme } from "../../../contexts/ThemeContext";
+import "./Header.css";
 
 const ROUTE_LABELS = {
-  store: 'Cửa hàng',
-  kitchen: 'Bếp trung tâm',
-  supply: 'Điều phối',
-  manager: 'Quản lý',
-  admin: 'Quản trị',
-  dashboard: 'Tổng quan',
-  orders: 'Đơn hàng',
-  new: 'Tạo mới',
-  inventory: 'Tồn kho',
-  receiving: 'Nhận hàng',
-  production: 'Sản xuất',
-  batches: 'Lô sản xuất',
-  delivery: 'Giao hàng',
-  issues: 'Vấn đề phát sinh',
-  products: 'Sản phẩm',
-  reports: 'Báo cáo',
-  performance: 'Hiệu suất',
-  users: 'Người dùng',
-  stores: 'Cửa hàng & Bếp',
-  config: 'Cấu hình',
+  store: "Cửa hàng",
+  kitchen: "Bếp trung tâm",
+  supply: "Điều phối",
+  manager: "Quản lý",
+  admin: "Quản trị",
+  dashboard: "Tổng quan",
+  orders: "Đơn hàng",
+  new: "Tạo mới",
+  inventory: "Tồn kho",
+  receiving: "Nhận hàng",
+  production: "Sản xuất",
+  batches: "Lô sản xuất",
+  delivery: "Giao hàng",
+  issues: "Vấn đề phát sinh",
+  products: "Sản phẩm",
+  recipes: "Công thức",
+  sales: "Ghi nhận bán hàng",
+  reports: "Báo cáo",
+  performance: "Hiệu suất",
+  users: "Người dùng",
+  stores: "Cửa hàng & Bếp",
+  kitchens: "Bếp Trung Tâm",
+  config: "Cấu hình",
+  "activity-logs": "Nhật ký hoạt động",
 };
 
 const ACTIVITY_ICONS = {
@@ -44,20 +63,49 @@ const ACTIVITY_ICONS = {
 };
 
 const ROLE_NOTIF_FILTER = {
-  STORE_STAFF: ['order_confirmed', 'delivery_shipped', 'stock_low', 'order_delivered'],
-  KITCHEN_STAFF: ['order_created', 'order_confirmed', 'production_started', 'stock_low', 'batch_completed'],
-  SUPPLY_COORDINATOR: ['delivery_shipped', 'issue_reported', 'batch_completed', 'order_delivered'],
-  MANAGER: ['order_created', 'production_started', 'issue_reported', 'stock_low', 'product_created', 'product_updated'],
-  ADMIN: ['issue_reported', 'order_created', 'stock_low', 'user_login', 'product_deleted'],
+  STORE_STAFF: [
+    "order_confirmed",
+    "delivery_shipped",
+    "stock_low",
+    "order_delivered",
+  ],
+  KITCHEN_STAFF: [
+    "order_created",
+    "order_confirmed",
+    "production_started",
+    "stock_low",
+    "batch_completed",
+  ],
+  SUPPLY_COORDINATOR: [
+    "delivery_shipped",
+    "issue_reported",
+    "batch_completed",
+    "order_delivered",
+  ],
+  MANAGER: [
+    "order_created",
+    "production_started",
+    "issue_reported",
+    "stock_low",
+    "product_created",
+    "product_updated",
+  ],
+  ADMIN: [
+    "issue_reported",
+    "order_created",
+    "stock_low",
+    "user_login",
+    "product_deleted",
+  ],
 };
 
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
-  const parts = location.pathname.split('/').filter(Boolean);
+  const parts = location.pathname.split("/").filter(Boolean);
   const [notifOpen, setNotifOpen] = useState(false);
   const [readNotifs, setReadNotifs] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const notifRef = useRef(null);
@@ -65,32 +113,44 @@ export default function Header() {
 
   const { user } = useAuth();
   const { theme, toggleTheme, toggleSidebar } = useTheme();
-  const { orders, products, users, stores, auditLogs, cart = [], formatDateTime } = useData();
+  const {
+    orders,
+    products,
+    users,
+    stores,
+    auditLogs,
+    cart = [],
+    formatDateTime,
+  } = useData();
 
-  const rolePrefix = user ? (ROLE_INFO[user.role]?.path || '') : '';
+  const rolePrefix = user ? ROLE_INFO[user.role]?.path || "" : "";
 
   const breadcrumbs = parts.map((part, i) => ({
     label: ROUTE_LABELS[part] || part,
-    path: '/' + parts.slice(0, i + 1).join('/'),
+    path: "/" + parts.slice(0, i + 1).join("/"),
     isLast: i === parts.length - 1,
   }));
 
   const allowedActivityTypes = ROLE_NOTIF_FILTER[user?.role] || [];
   const notifications = useMemo(() => {
     const list = auditLogs || [];
-    if (user?.role === 'ADMIN') return list;
-    return list.filter(act => allowedActivityTypes.includes(act.action));
+    if (user?.role === "ADMIN") return list;
+    return list.filter((act) => allowedActivityTypes.includes(act.action));
   }, [auditLogs, user?.role, allowedActivityTypes]);
 
-  const unreadCount = notifications.filter(act => !readNotifs.includes(act.id)).length;
+  const unreadCount = notifications.filter(
+    (act) => !readNotifs.includes(act.id),
+  ).length;
 
   const handleMarkRead = (id) => {
-    setReadNotifs(prev => prev.includes(id) ? prev : [...prev, id]);
+    setReadNotifs((prev) => (prev.includes(id) ? prev : [...prev, id]));
   };
 
   const handleMarkAllRead = () => {
-    setReadNotifs(prev => {
-      const newIds = notifications.map(a => a.id).filter(id => !prev.includes(id));
+    setReadNotifs((prev) => {
+      const newIds = notifications
+        .map((a) => a.id)
+        .filter((id) => !prev.includes(id));
       return [...prev, ...newIds];
     });
   };
@@ -102,27 +162,55 @@ export default function Header() {
 
     const results = [];
 
-    orders.forEach(o => {
-      if (o.id.toLowerCase().includes(q) || (o.storeName || '').toLowerCase().includes(q)) {
-        results.push({ type: 'Đơn hàng', label: `${o.id} — ${o.storeName || ''}`, path: `${rolePrefix}/orders` });
+    orders.forEach((o) => {
+      if (
+        o.id.toLowerCase().includes(q) ||
+        (o.storeName || "").toLowerCase().includes(q)
+      ) {
+        results.push({
+          type: "Đơn hàng",
+          label: `${o.id} — ${o.storeName || ""}`,
+          path: `${rolePrefix}/orders`,
+        });
       }
     });
 
-    products.forEach(p => {
+    products.forEach((p) => {
       if (p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)) {
-        results.push({ type: 'Sản phẩm', label: `${p.id} — ${p.name}`, path: rolePrefix === '/manager' ? '/manager/products' : `${rolePrefix}/inventory` });
+        results.push({
+          type: "Sản phẩm",
+          label: `${p.id} — ${p.name}`,
+          path:
+            rolePrefix === "/manager"
+              ? "/manager/products"
+              : `${rolePrefix}/inventory`,
+        });
       }
     });
 
-    users.forEach(u => {
-      if (u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)) {
-        results.push({ type: 'Người dùng', label: `${u.name} — ${u.email}`, path: '/admin/users' });
+    users.forEach((u) => {
+      if (
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q)
+      ) {
+        results.push({
+          type: "Người dùng",
+          label: `${u.name} — ${u.email}`,
+          path: "/admin/users",
+        });
       }
     });
 
-    stores.forEach(s => {
-      if (s.name.toLowerCase().includes(q) || (s.address || '').toLowerCase().includes(q)) {
-        results.push({ type: 'Cửa hàng', label: s.name, path: '/admin/stores' });
+    stores.forEach((s) => {
+      if (
+        s.name.toLowerCase().includes(q) ||
+        (s.address || "").toLowerCase().includes(q)
+      ) {
+        results.push({
+          type: "Cửa hàng",
+          label: s.name,
+          path: "/admin/stores",
+        });
       }
     });
 
@@ -130,7 +218,7 @@ export default function Header() {
   }, [searchQuery, orders, products, users, stores, rolePrefix]);
 
   const handleSearchSelect = (path) => {
-    setSearchQuery('');
+    setSearchQuery("");
     setSearchOpen(false);
     navigate(path);
   };
@@ -145,22 +233,36 @@ export default function Header() {
         setSearchOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   return (
     <header className="app-header">
       <div className="app-header__left">
-        <button className="app-header__menu-btn" onClick={toggleSidebar} aria-label="Mở menu">
+        <button
+          className="app-header__menu-btn"
+          onClick={toggleSidebar}
+          aria-label="Mở menu"
+        >
           <Menu size={20} />
         </button>
         <nav className="app-header__breadcrumb">
           {breadcrumbs.map((crumb, i) => (
-            <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {i > 0 && <ChevronRight size={14} className="app-header__breadcrumb-sep" />}
+            <span
+              key={i}
+              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              {i > 0 && (
+                <ChevronRight
+                  size={14}
+                  className="app-header__breadcrumb-sep"
+                />
+              )}
               {crumb.isLast ? (
-                <span className="app-header__breadcrumb-current">{crumb.label}</span>
+                <span className="app-header__breadcrumb-current">
+                  {crumb.label}
+                </span>
               ) : (
                 <Link to={crumb.path}>{crumb.label}</Link>
               )}
@@ -173,20 +275,26 @@ export default function Header() {
         {/* Mobile search toggle */}
         <button
           className="app-header__search-toggle"
-          onClick={() => setMobileSearchOpen(prev => !prev)}
+          onClick={() => setMobileSearchOpen((prev) => !prev)}
           aria-label="Tìm kiếm"
         >
           <Search size={20} />
         </button>
 
-        <div className={`app-header__search ${mobileSearchOpen ? 'app-header__search--mobile-open' : ''}`} ref={searchRef}>
+        <div
+          className={`app-header__search ${mobileSearchOpen ? "app-header__search--mobile-open" : ""}`}
+          ref={searchRef}
+        >
           <Search size={16} className="app-header__search-icon" />
           <input
             type="text"
             className="app-header__search-input"
             placeholder="Tìm kiếm..."
             value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSearchOpen(true);
+            }}
             onFocus={() => setSearchOpen(true)}
           />
           {searchOpen && searchResults.length > 0 && (
@@ -195,7 +303,7 @@ export default function Header() {
                 searchResults.reduce((acc, r) => {
                   (acc[r.type] = acc[r.type] || []).push(r);
                   return acc;
-                }, {})
+                }, {}),
               ).map(([type, items]) => (
                 <div key={type} className="search-result-group">
                   <div className="search-result-group__label">{type}</div>
@@ -215,59 +323,92 @@ export default function Header() {
         </div>
 
         {/* Cart Icon — Only for Store Staff */}
-        {user?.role === 'STORE_STAFF' && (
-          <Link to="/store/orders/new" className="app-header__icon-btn" aria-label="Giỏ hàng">
+        {user?.role === "STORE_STAFF" && (
+          <Link
+            to="/store/orders/new"
+            className="app-header__icon-btn"
+            aria-label="Giỏ hàng"
+          >
             <ShoppingCart size={20} />
-            {cart.length > 0 && <span className="app-header__notif-dot">{cart.length}</span>}
+            {cart.length > 0 && (
+              <span className="app-header__notif-dot">{cart.length}</span>
+            )}
           </Link>
         )}
 
         {/* Theme Toggle */}
-        <button className="app-header__icon-btn" onClick={toggleTheme} aria-label="Đổi chủ đề">
-          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+        <button
+          className="app-header__icon-btn"
+          onClick={toggleTheme}
+          aria-label="Đổi chủ đề"
+        >
+          {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
         </button>
 
         {/* Notification Bell */}
         <div className="notif-wrapper" ref={notifRef}>
-          <button className="app-header__icon-btn" onClick={() => setNotifOpen(!notifOpen)} aria-label={`Thông báo${unreadCount > 0 ? `, ${unreadCount} chưa đọc` : ''}`}>
+          <button
+            className="app-header__icon-btn"
+            onClick={() => setNotifOpen(!notifOpen)}
+            aria-label={`Thông báo${unreadCount > 0 ? `, ${unreadCount} chưa đọc` : ""}`}
+          >
             <Bell size={20} />
-            {unreadCount > 0 && <span className="app-header__notif-dot">{unreadCount}</span>}
+            {unreadCount > 0 && (
+              <span className="app-header__notif-dot">{unreadCount}</span>
+            )}
           </button>
 
           {notifOpen && (
             <div className="notif-dropdown">
               <div className="notif-dropdown__header">
                 <h4>Thông báo</h4>
-                <button className="notif-dropdown__mark-all" onClick={handleMarkAllRead}>
+                <button
+                  className="notif-dropdown__mark-all"
+                  onClick={handleMarkAllRead}
+                >
                   Đánh dấu tất cả đã đọc
                 </button>
               </div>
               <div className="notif-dropdown__list">
                 {notifications.length === 0 ? (
-                  <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                  <div
+                    style={{
+                      padding: "16px",
+                      textAlign: "center",
+                      color: "var(--text-muted)",
+                      fontSize: "13px",
+                    }}
+                  >
                     Không có thông báo nào.
                   </div>
                 ) : (
-                  notifications.map(act => {
+                  notifications.map((act) => {
                     const Icon = ACTIVITY_ICONS[act.action] || Bell;
                     const isRead = readNotifs.includes(act.id);
-                  return (
-                    <div
-                      key={act.id}
-                      className={`notif-item ${isRead ? 'notif-item--read' : ''}`}
-                      onClick={() => handleMarkRead(act.id)}
-                    >
-                      <div className={`notif-item__icon notif-item__icon--${act.action.includes('issue') || act.action.includes('stock') ? 'warning' : act.action.includes('delivery') || act.action.includes('batch') ? 'success' : 'primary'}`}>
-                        <Icon size={16} />
+                    return (
+                      <div
+                        key={act.id}
+                        className={`notif-item ${isRead ? "notif-item--read" : ""}`}
+                        onClick={() => handleMarkRead(act.id)}
+                      >
+                        <div
+                          className={`notif-item__icon notif-item__icon--${act.action.includes("issue") || act.action.includes("stock") ? "warning" : act.action.includes("delivery") || act.action.includes("batch") ? "success" : "primary"}`}
+                        >
+                          <Icon size={16} />
+                        </div>
+                        <div className="notif-item__content">
+                          <p className="notif-item__message">
+                            {act.details || act.message}
+                          </p>
+                          <p className="notif-item__time">
+                            {formatDateTime(act.timestamp)}
+                          </p>
+                        </div>
+                        {!isRead && <span className="notif-item__unread-dot" />}
                       </div>
-                      <div className="notif-item__content">
-                        <p className="notif-item__message">{act.details || act.message}</p>
-                        <p className="notif-item__time">{formatDateTime(act.timestamp)}</p>
-                      </div>
-                      {!isRead && <span className="notif-item__unread-dot" />}
-                    </div>
-                  );
-                }))}
+                    );
+                  })
+                )}
               </div>
             </div>
           )}

@@ -36,16 +36,20 @@ export default function KitchenInventory() {
         size: 20,
       });
       setInventory(data.content || []);
-      setTotalPages(data.totalPages || 0);
+      setTotalPages(data.page?.totalPages ?? data.totalPages ?? 0);
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Không thể tải kho nguyên liệu");
+      toast.error(
+        err.response?.data?.message || "Không thể tải kho nguyên liệu",
+      );
     } finally {
       setLoading(false);
     }
   }, [page, search]);
 
-  useEffect(() => { fetchInventory(); }, [fetchInventory]);
+  useEffect(() => {
+    fetchInventory();
+  }, [fetchInventory]);
 
   const columns = [
     {
@@ -57,7 +61,9 @@ export default function KitchenInventory() {
       header: "Lô",
       accessor: "batchNo",
       render: (r) => (
-        <span className="font-mono" style={{ fontSize: "12px" }}>{r.batchNo || "—"}</span>
+        <span className="font-mono" style={{ fontSize: "12px" }}>
+          {r.batchNo || "—"}
+        </span>
       ),
     },
     {
@@ -70,7 +76,12 @@ export default function KitchenInventory() {
       accessor: "quantity",
       sortable: true,
       render: (row) => (
-        <span style={{ fontWeight: 600, color: row.lowStock ? "var(--danger)" : "var(--text-primary)" }}>
+        <span
+          style={{
+            fontWeight: 600,
+            color: row.lowStock ? "var(--danger)" : "var(--text-primary)",
+          }}
+        >
           {row.quantity} {row.unit}
         </span>
       ),
@@ -88,7 +99,15 @@ export default function KitchenInventory() {
         const expired = isExpired(row.expiryDate);
         const expiring = isExpiringSoon(row.expiryDate);
         return (
-          <span style={{ color: expired ? "var(--danger)" : expiring ? "var(--warning)" : "var(--text-primary)" }}>
+          <span
+            style={{
+              color: expired
+                ? "var(--danger)"
+                : expiring
+                  ? "var(--warning)"
+                  : "var(--text-primary)",
+            }}
+          >
             {formatDate(row.expiryDate)}
           </span>
         );
@@ -98,12 +117,28 @@ export default function KitchenInventory() {
       header: "Trạng thái",
       render: (row) => {
         if (isExpired(row.expiryDate) && row.quantity > 0)
-          return <Badge variant="danger" dot>Hết hạn</Badge>;
+          return (
+            <Badge variant="danger" dot>
+              Hết hạn
+            </Badge>
+          );
         if (row.lowStock)
-          return <Badge variant="danger" dot>Cần bổ sung</Badge>;
+          return (
+            <Badge variant="danger" dot>
+              Cần bổ sung
+            </Badge>
+          );
         if (isExpiringSoon(row.expiryDate))
-          return <Badge variant="warning" dot>Sắp hết hạn</Badge>;
-        return <Badge variant="success" dot>Bình thường</Badge>;
+          return (
+            <Badge variant="warning" dot>
+              Sắp hết hạn
+            </Badge>
+          );
+        return (
+          <Badge variant="success" dot>
+            Bình thường
+          </Badge>
+        );
       },
     },
   ];
@@ -116,15 +151,17 @@ export default function KitchenInventory() {
       subtitle="Xem tồn kho nguyên liệu, hạn sử dụng và lô hàng"
     >
       {lowStockCount > 0 && (
-        <div style={{
-          padding: "12px 16px",
-          background: "var(--danger-bg, #fef2f2)",
-          border: "1px solid var(--danger)",
-          borderRadius: "var(--radius-md)",
-          marginBottom: "16px",
-          fontSize: "14px",
-          color: "var(--danger)",
-        }}>
+        <div
+          style={{
+            padding: "12px 16px",
+            background: "var(--danger-bg, #fef2f2)",
+            border: "1px solid var(--danger)",
+            borderRadius: "var(--radius-md)",
+            marginBottom: "16px",
+            fontSize: "14px",
+            color: "var(--danger)",
+          }}
+        >
           {lowStockCount} nguyên liệu dưới mức tối thiểu.
         </div>
       )}
@@ -140,10 +177,39 @@ export default function KitchenInventory() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "16px" }}>
-          <Button variant="ghost" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>← Trước</Button>
-          <span style={{ lineHeight: "32px", fontSize: "13px", color: "var(--text-secondary)" }}>Trang {page + 1} / {totalPages}</span>
-          <Button variant="ghost" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>Sau →</Button>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "8px",
+            marginTop: "16px",
+          }}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page === 0}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            ← Trước
+          </Button>
+          <span
+            style={{
+              lineHeight: "32px",
+              fontSize: "13px",
+              color: "var(--text-secondary)",
+            }}
+          >
+            Trang {page + 1} / {totalPages}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Sau →
+          </Button>
         </div>
       )}
     </PageWrapper>

@@ -25,11 +25,11 @@ function daysAgo(n) {
   return d.toISOString().split("T")[0];
 }
 
-// Group daily rows [{date, storeName, totalRevenue, totalItems}] by month
-function groupByMonth(rows) {
+// Group daily rows by month — days[] from /manager/sales/daily
+function groupByMonth(days) {
   const map = {};
-  rows.forEach((r) => {
-    const d = new Date(r.date);
+  days.forEach((r) => {
+    const d = new Date(r.reportDate);
     const key = `Th${d.getMonth() + 1}/${d.getFullYear()}`;
     if (!map[key]) map[key] = { month: key, revenue: 0 };
     map[key].revenue += r.totalRevenue ?? 0;
@@ -41,20 +41,21 @@ function groupByMonth(rows) {
   });
 }
 
-// Group by store: [{name, revenue, orders}]
-function groupByStore(rows) {
+// Group by store: flatten days[].stores[] and sum per store
+function groupByStore(days) {
   const map = {};
-  rows.forEach((r) => {
-    const key = r.storeName ?? r.storeId ?? "Không xác định";
-    if (!map[key]) map[key] = { name: key, revenue: 0, orders: 0 };
-    map[key].revenue += r.totalRevenue ?? 0;
-    map[key].orders += r.totalItems ?? 1;
+  days.forEach((day) => {
+    (day.stores ?? []).forEach((s) => {
+      const key = s.storeName ?? s.storeId ?? "Không xác định";
+      if (!map[key]) map[key] = { name: key, revenue: 0 };
+      map[key].revenue += s.totalRevenue ?? 0;
+    });
   });
   return Object.values(map).sort((a, b) => b.revenue - a.revenue);
 }
 
 // Group last-7-days rows by day-of-week
-function groupLast7Days(rows) {
+function groupLast7Days(days) {
   const DAY_NAMES = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
   const map = {};
   const today = new Date();
@@ -63,12 +64,11 @@ function groupLast7Days(rows) {
     d.setDate(today.getDate() - i);
     const key = d.toISOString().split("T")[0];
     const label = DAY_NAMES[d.getDay()];
-    map[key] = { day: label, count: 0, revenue: 0 };
+    map[key] = { day: label, revenue: 0 };
   }
-  rows.forEach((r) => {
-    if (map[r.date]) {
-      map[r.date].count += r.totalItems ?? 0;
-      map[r.date].revenue += r.totalRevenue ?? 0;
+  days.forEach((r) => {
+    if (map[r.reportDate]) {
+      map[r.reportDate].revenue += r.totalRevenue ?? 0;
     }
   });
   return Object.values(map);
@@ -104,8 +104,8 @@ export default function Reports({
         }),
       ]);
 
-      const dailyRows = dailyResp?.content ?? dailyResp ?? [];
-      const weeklyRows = weeklyResp?.content ?? weeklyResp ?? [];
+      const dailyRows = dailyResp?.days ?? [];
+      const weeklyRows = weeklyResp?.days ?? [];
 
       setMonthlyRevenue(groupByMonth(dailyRows));
       setStoreRevenue(groupByStore(dailyRows));
@@ -155,7 +155,7 @@ export default function Reports({
 
   // Grand total for summary
   const grandTotal =
-    totalRevenue?.totalRevenue ??
+    totalRevenue?.totalReportRevenue ??
     monthlyRevenue.reduce((s, r) => s + r.revenue, 0);
 
   return (

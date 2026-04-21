@@ -284,7 +284,7 @@ export default function KitchenOrders({
         size: 20,
       });
       setOrders(data.content || []);
-      setTotalPages(data.totalPages || 0);
+      setTotalPages(data.page?.totalPages ?? data.totalPages ?? 0);
     } catch (err) {
       console.error(err);
       toast.error(
@@ -413,7 +413,9 @@ export default function KitchenOrders({
             <Flag size={10} style={{ marginRight: 3 }} />
             {PRIORITY_LABELS[row.priority] || row.priority}
           </Badge>
-        ) : "—",
+        ) : (
+          "—"
+        ),
     },
     {
       header: "Trạng thái",

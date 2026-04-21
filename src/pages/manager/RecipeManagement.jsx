@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
@@ -14,7 +14,12 @@ const UNIT_OPTIONS = [
   { value: "cái", label: "cái" },
 ];
 
-const EMPTY_FORM = { productId: "", ingredientId: "", quantity: "", unit: "kg" };
+const EMPTY_FORM = {
+  productId: "",
+  ingredientId: "",
+  quantity: "",
+  unit: "kg",
+};
 
 export default function RecipeManagement() {
   const [recipes, setRecipes] = useState([]);
@@ -40,12 +45,37 @@ export default function RecipeManagement() {
         setRecipes(Array.isArray(rec) ? rec : (rec?.content ?? []));
         setProducts(Array.isArray(prod) ? prod : (prod?.content ?? []));
       })
-      .catch(() => { if (mounted) toast.error("Không thể tải dữ liệu công thức"); })
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
+      .catch(() => {
+        if (mounted) toast.error("Không thể tải dữ liệu công thức");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const productOptions = products.map((p) => ({ value: p.id, label: `${p.name} (${p.id})` }));
+  const productOptions = products.map((p) => ({
+    value: p.id,
+    label: `${p.name} (${p.id})`,
+  }));
+
+  // Group flat recipe rows by productId — one row per product with ingredients[]
+  const groupedRecipes = useMemo(() => {
+    const map = {};
+    recipes.forEach((r) => {
+      if (!map[r.productId]) {
+        map[r.productId] = {
+          productId: r.productId,
+          productName: r.productName,
+          ingredients: [],
+        };
+      }
+      map[r.productId].ingredients.push(r);
+    });
+    return Object.values(map);
+  }, [recipes]);
 
   const handleOpenNew = () => {
     setEditItem(null);
@@ -69,7 +99,8 @@ export default function RecipeManagement() {
   const validate = () => {
     const errs = {};
     if (!editItem && !form.productId) errs.productId = "Vui lòng chọn sản phẩm";
-    if (!editItem && !form.ingredientId) errs.ingredientId = "Vui lòng chọn nguyên liệu";
+    if (!editItem && !form.ingredientId)
+      errs.ingredientId = "Vui lòng chọn nguyên liệu";
     if (!form.quantity || parseFloat(form.quantity) <= 0)
       errs.quantity = "Định mức phải lớn hơn 0";
     if (!form.unit) errs.unit = "Vui lòng chọn đơn vị";
@@ -86,9 +117,14 @@ export default function RecipeManagement() {
           quantity: parseFloat(form.quantity),
           unit: form.unit,
         };
-        const updated = await managerService.recipes.update(editItem.id, payload);
+        const updated = await managerService.recipes.update(
+          editItem.id,
+          payload,
+        );
         setRecipes((prev) =>
-          prev.map((r) => (r.id === editItem.id ? (updated ?? { ...r, ...payload }) : r))
+          prev.map((r) =>
+            r.id === editItem.id ? (updated ?? { ...r, ...payload }) : r,
+          ),
         );
         toast.success("Đã cập nhật công thức");
       } else {
@@ -131,53 +167,84 @@ export default function RecipeManagement() {
       header: "Sản phẩm",
       accessor: "productName",
       sortable: true,
-      render: (r) => <span style={{ fontWeight: 500 }}>{r.productName || r.productId}</span>,
-    },
-    {
-      header: "Mã SP",
-      accessor: "productId",
-      width: "100px",
+      width: "200px",
       render: (r) => (
-        <span className="font-mono" style={{ fontSize: "12px" }}>{r.productId}</span>
+        <div>
+          <div style={{ fontWeight: 600 }}>{r.productName || r.productId}</div>
+          <div
+            className="font-mono"
+            style={{ fontSize: "11px", color: "var(--text-muted)" }}
+          >
+            {r.productId}
+          </div>
+        </div>
       ),
     },
     {
-      header: "Nguyên liệu",
-      accessor: "ingredientName",
-      sortable: true,
-      render: (r) => r.ingredientName || r.ingredientId,
-    },
-    {
-      header: "Định mức",
-      accessor: "quantity",
-      width: "100px",
+      header: "Thành phần & Định mức",
       render: (r) => (
-        <span className="font-mono">
-          {r.quantity} <span style={{ color: "var(--text-muted)" }}>{r.unit}</span>
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          {r.ingredients.map((ing) => (
+            <div
+              key={ing.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                fontSize: "13px",
+              }}
+            >
+              <span style={{ fontWeight: 500 }}>
+                {ing.ingredientName || ing.ingredientId}
+              </span>
+              <span
+                className="font-mono"
+                style={{ color: "var(--text-muted)", fontSize: "11px" }}
+              >
+                {ing.ingredientId}
+              </span>
+              <span
+                className="font-mono"
+                style={{ color: "var(--primary)", marginLeft: "auto" }}
+              >
+                {ing.quantity} {ing.unit}
+              </span>
+            </div>
+          ))}
+        </div>
       ),
     },
     {
       header: "",
-      width: "80px",
+      width: "90px",
       render: (row) => (
-        <div style={{ display: "flex", gap: "4px" }}>
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={Edit}
-            title="Sửa"
-            onClick={(e) => { e.stopPropagation(); handleEdit(row); }}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={Trash2}
-            title="Xóa"
-            onClick={(e) => { e.stopPropagation(); setConfirmDelete(row); }}
-          />
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          {row.ingredients.map((ing) => (
+            <div key={ing.id} style={{ display: "flex", gap: "4px" }}>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={Edit}
+                title="Sửa"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(ing);
+                }}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={Trash2}
+                title="Xóa"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmDelete(ing);
+                }}
+              />
+            </div>
+          ))}
         </div>
       ),
     },
@@ -195,10 +262,12 @@ export default function RecipeManagement() {
     >
       <DataTable
         columns={columns}
-        data={recipes}
+        data={groupedRecipes}
         loading={loading}
         searchPlaceholder="Tìm theo sản phẩm hoặc nguyên liệu..."
-        toolbar={<Badge variant="primary">{recipes.length} dòng công thức</Badge>}
+        toolbar={
+          <Badge variant="primary">{groupedRecipes.length} sản phẩm</Badge>
+        }
       />
 
       {/* Add/Edit Modal */}
@@ -209,7 +278,9 @@ export default function RecipeManagement() {
         size="md"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>Hủy</Button>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>
+              Hủy
+            </Button>
             <Button onClick={handleSave} disabled={saving}>
               {editItem ? "Lưu thay đổi" : "Thêm"}
             </Button>
@@ -222,7 +293,9 @@ export default function RecipeManagement() {
             required
             options={productOptions}
             value={form.productId}
-            onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, productId: e.target.value }))
+            }
             error={errors.productId}
             disabled={!!editItem}
           />
@@ -230,12 +303,20 @@ export default function RecipeManagement() {
             label="Mã nguyên liệu"
             required
             value={form.ingredientId}
-            onChange={(e) => setForm((f) => ({ ...f, ingredientId: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, ingredientId: e.target.value }))
+            }
             placeholder="Nhập mã nguyên liệu (VD: ING001)"
             error={errors.ingredientId}
             disabled={!!editItem}
           />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
             <Input
               label="Định mức"
               required
@@ -243,7 +324,9 @@ export default function RecipeManagement() {
               step="0.001"
               min="0"
               value={form.quantity}
-              onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, quantity: e.target.value }))
+              }
               placeholder="0.20"
               error={errors.quantity}
             />
@@ -266,8 +349,14 @@ export default function RecipeManagement() {
         title="Xác nhận xóa"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setConfirmDelete(null)}>Hủy</Button>
-            <Button variant="danger" onClick={handleDeleteConfirm} disabled={saving}>
+            <Button variant="secondary" onClick={() => setConfirmDelete(null)}>
+              Hủy
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteConfirm}
+              disabled={saving}
+            >
               Xóa
             </Button>
           </>
@@ -275,8 +364,14 @@ export default function RecipeManagement() {
       >
         <p>
           Xóa công thức{" "}
-          <strong>{confirmDelete?.ingredientName || confirmDelete?.ingredientId}</strong>{" "}
-          cho sản phẩm <strong>{confirmDelete?.productName || confirmDelete?.productId}</strong>?
+          <strong>
+            {confirmDelete?.ingredientName || confirmDelete?.ingredientId}
+          </strong>{" "}
+          cho sản phẩm{" "}
+          <strong>
+            {confirmDelete?.productName || confirmDelete?.productId}
+          </strong>
+          ?
         </p>
       </Modal>
     </PageWrapper>
