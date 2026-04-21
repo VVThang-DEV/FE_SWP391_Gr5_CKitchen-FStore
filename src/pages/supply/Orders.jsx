@@ -232,7 +232,7 @@ export default function SupplyOrders() {
         size: 20,
       });
       setOrders(data.content || []);
-      setTotalPages(data.totalPages || 0);
+      setTotalPages(data.page?.totalPages ?? data.totalPages ?? 0);
     } catch (err) {
       toast.error(
         err.response?.data?.message || "Không thể tải danh sách đơn hàng",

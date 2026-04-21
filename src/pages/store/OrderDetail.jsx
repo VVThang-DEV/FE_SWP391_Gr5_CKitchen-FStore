@@ -75,22 +75,17 @@ export default function OrderDetail() {
 
   const [order, setOrder] = useState(null);
   const [timeline, setTimeline] = useState(null);
-  const [priceMap, setPriceMap] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [orderResp, timelineResp, productsResp] = await Promise.all([
+        const [orderResp, timelineResp] = await Promise.all([
           storeService.getOrderById(id),
           storeService.getOrderTimeline(id).catch(() => null),
-          storeService.getAvailableProducts({ size: 200 }).catch(() => null),
         ]);
         setOrder(orderResp);
         setTimeline(timelineResp);
-        const map = {};
-        (productsResp?.content ?? []).forEach((p) => { map[p.id] = p.price; });
-        setPriceMap(map);
       } catch {
         toast.error("Không tìm thấy thông tin đơn hàng");
       } finally {
@@ -258,44 +253,19 @@ export default function OrderDetail() {
           <div className="order-detail__items">
             <div className="order-detail__items-header">
               <span>Sản phẩm</span>
-              <span style={{ textAlign: "right" }}>Đơn giá</span>
               <span style={{ textAlign: "right" }}>Số lượng</span>
-              <span style={{ textAlign: "right" }}>Thành tiền</span>
             </div>
-            {(order.items ?? order.orderItems ?? []).map((item, i) => {
-              const unitPrice = priceMap[item.productId] ?? item.unitPrice ?? item.price ?? 0;
-              const subtotal = unitPrice * (item.quantity ?? 0);
-              return (
-                <div key={i} className="order-detail__item-row">
-                  <div>
-                    <p className="order-detail__item-name">
-                      {item.productName}
-                    </p>
-                    <p className="order-detail__item-id font-mono">
-                      {item.productId}
-                    </p>
-                  </div>
-                  <span
-                    className="order-detail__item-qty font-mono"
-                    style={{ textAlign: "right" }}
-                  >
-                    {formatCurrency(unitPrice)}
-                  </span>
-                  <span
-                    className="order-detail__item-qty font-mono"
-                    style={{ textAlign: "right" }}
-                  >
-                    {item.quantity} {item.unit}
-                  </span>
-                  <span
-                    className="order-detail__item-qty font-mono"
-                    style={{ textAlign: "right" }}
-                  >
-                    {formatCurrency(subtotal)}
-                  </span>
+            {(order.items ?? order.orderItems ?? []).map((item, i) => (
+              <div key={i} className="order-detail__item-row">
+                <div>
+                  <p className="order-detail__item-name">{item.productName}</p>
+                  <p className="order-detail__item-id font-mono">{item.productId}</p>
                 </div>
-              );
-            })}
+                <span className="order-detail__item-qty font-mono" style={{ textAlign: "right" }}>
+                  {item.quantity} {item.unit}
+                </span>
+              </div>
+            ))}
             <div className="order-detail__items-total">
               <span>Tổng cộng</span>
               <span className="font-mono">

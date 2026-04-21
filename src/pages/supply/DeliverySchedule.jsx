@@ -108,7 +108,7 @@ export default function DeliverySchedule() {
         size: 20,
       });
       setDeliveries(data.content || data || []);
-      setTotalPages(data.totalPages || 0);
+      setTotalPages(data.page?.totalPages ?? data.totalPages ?? 0);
     } catch (err) {
       toast.error("Không thể tải danh sách giao hàng");
     } finally {

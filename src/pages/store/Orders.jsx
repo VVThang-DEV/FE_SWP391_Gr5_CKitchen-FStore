@@ -11,12 +11,8 @@ import storeService from "../../services/storeService";
 export default function StoreOrders() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const {
-    STATUS_LABELS,
-    STATUS_COLORS,
-    formatCurrency,
-    formatDateTime,
-  } = useData();
+  const { STATUS_LABELS, STATUS_COLORS, formatCurrency, formatDateTime } =
+    useData();
   const [statusFilter, setStatusFilter] = useState("all");
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +23,7 @@ export default function StoreOrders() {
       try {
         const queryParams = { size: 100 };
         if (statusFilter !== "all") {
-          queryParams.status = statusFilter.toUpperCase();
+          queryParams.status = statusFilter;
         }
         const resp = await storeService.getOrders(queryParams);
         setData(resp.content || []);
@@ -82,7 +78,7 @@ export default function StoreOrders() {
       accessor: "status",
       sortable: true,
       render: (row) => {
-        const s = row.status?.toLowerCase() || '';
+        const s = row.status?.toLowerCase() || "";
         return (
           <Badge variant={STATUS_COLORS[s]} dot>
             {STATUS_LABELS[s]}
@@ -117,12 +113,13 @@ export default function StoreOrders() {
 
   const statusTabs = [
     { value: "all", label: "Tất cả" },
-    { value: "pending", label: "Chờ xử lý" },
-    { value: "confirmed", label: "Đã xác nhận" },
-    { value: "producing", label: "Đang SX" },
-    { value: "ready", label: "Sẵn sàng giao" },
-    { value: "shipping", label: "Đang giao" },
-    { value: "delivered", label: "Đã giao" },
+    { value: "PENDING", label: "Chờ xử lý" },
+    { value: "ASSIGNED", label: "Đã xác nhận" },
+    { value: "IN_PROGRESS", label: "Đang SX" },
+    { value: "PACKED_WAITING_SHIPPER", label: "Sẵn sàng giao" },
+    { value: "SHIPPING", label: "Đang giao" },
+    { value: "DELIVERED", label: "Đã giao" },
+    { value: "CANCELLED", label: "Đã hủy" },
   ];
 
   return (

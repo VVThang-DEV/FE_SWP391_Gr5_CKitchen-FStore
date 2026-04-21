@@ -145,15 +145,6 @@ function AppRoutes() {
           <Route path="/manager/recipes" element={<RecipeManagement />} />
           <Route path="/manager/inventory" element={<ManagerInventory />} />
           <Route path="/manager/reports" element={<Reports />} />
-          <Route
-            path="/manager/performance"
-            element={
-              <Reports
-                title="Hiệu suất vận hành"
-                subtitle="Phân tích hiệu suất sản xuất, phân phối và bán hàng"
-              />
-            }
-          />
         </Route>
 
         {/* Admin */}
