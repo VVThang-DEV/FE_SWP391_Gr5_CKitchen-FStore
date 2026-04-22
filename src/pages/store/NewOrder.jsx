@@ -59,7 +59,7 @@ export default function NewOrder() {
           productName: product.name,
           quantity: 1,
           unit: product.unit,
-          price: product.price,
+          price: product.cost,
         },
       ];
     });
@@ -208,7 +208,7 @@ export default function NewOrder() {
                     <h4 className="product-card__name">{product.name}</h4>
                     <Badge variant="neutral">{product.category}</Badge>
                     <p className="product-card__price">
-                      {formatCurrency(product.price)} / {product.unit}
+                      {formatCurrency(product.cost)} / {product.unit}
                     </p>
                   </div>
                   {inCart && (
