@@ -24,10 +24,13 @@ import {
 } from "recharts";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
-import { StatCard, Badge, Spinner } from "../../components/ui";
+import { StatCard, Badge, LoadingScreen } from "../../components/ui";
 import { useAuth } from "../../contexts/AuthContext";
 import managerService from "../../services/managerService";
 import "../Dashboard.css";
+
+// Module-level cache so navigating back to this page doesn't re-fetch
+let _cache = null;
 
 function formatCurrency(v) {
   if (v == null) return "—";
@@ -40,12 +43,17 @@ function formatCurrency(v) {
 export default function ManagerDashboard() {
   const { user } = useAuth();
 
-  const [overview, setOverview] = useState(null);
-  const [kitchenLowStock, setKitchenLowStock] = useState([]);
-  const [storeLowStock, setStoreLowStock] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [overview, setOverview] = useState(_cache?.overview ?? null);
+  const [kitchenLowStock, setKitchenLowStock] = useState(
+    _cache?.kitchenLowStock ?? [],
+  );
+  const [storeLowStock, setStoreLowStock] = useState(
+    _cache?.storeLowStock ?? [],
+  );
+  const [loading, setLoading] = useState(!_cache);
 
   useEffect(() => {
+    if (_cache) return; // already loaded this session
     let mounted = true;
     Promise.all([
       managerService.dashboard.getOverview(),
@@ -54,11 +62,18 @@ export default function ManagerDashboard() {
     ])
       .then(([ov, kitchen, store]) => {
         if (!mounted) return;
+        const kitchenArr = Array.isArray(kitchen)
+          ? kitchen
+          : (kitchen?.content ?? []);
+        const storeArr = Array.isArray(store) ? store : (store?.content ?? []);
+        _cache = {
+          overview: ov,
+          kitchenLowStock: kitchenArr,
+          storeLowStock: storeArr,
+        };
         setOverview(ov);
-        setKitchenLowStock(
-          Array.isArray(kitchen) ? kitchen : (kitchen?.content ?? []),
-        );
-        setStoreLowStock(Array.isArray(store) ? store : (store?.content ?? []));
+        setKitchenLowStock(kitchenArr);
+        setStoreLowStock(storeArr);
       })
       .catch(() => {
         if (mounted) toast.error("Không thể tải dữ liệu tổng quan");
@@ -92,26 +107,42 @@ export default function ManagerDashboard() {
   ];
 
   const inventoryRadarData = [
-    { subject: "Hàng tồn bếp", value: lowStockKitchenItems, max: Math.max(lowStockKitchenItems, 20) },
-    { subject: "Hàng tồn CH", value: lowStockStoreItems, max: Math.max(lowStockStoreItems, 20) },
-    { subject: "Lô đang SX", value: inProgressBatches, max: Math.max(inProgressBatches, 10) },
-    { subject: "KH hoạt động", value: activeProductionPlans, max: Math.max(activeProductionPlans, 10) },
-    { subject: "Đơn chờ", value: pendingOrders, max: Math.max(pendingOrders, 10) },
+    {
+      subject: "Hàng tồn bếp",
+      value: lowStockKitchenItems,
+      max: Math.max(lowStockKitchenItems, 20),
+    },
+    {
+      subject: "Hàng tồn CH",
+      value: lowStockStoreItems,
+      max: Math.max(lowStockStoreItems, 20),
+    },
+    {
+      subject: "Lô đang SX",
+      value: inProgressBatches,
+      max: Math.max(inProgressBatches, 10),
+    },
+    {
+      subject: "KH hoạt động",
+      value: activeProductionPlans,
+      max: Math.max(activeProductionPlans, 10),
+    },
+    {
+      subject: "Đơn chờ",
+      value: pendingOrders,
+      max: Math.max(pendingOrders, 10),
+    },
   ];
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <PageWrapper>
-      <div
-        className="welcome-banner bg-gradient-primary"
-      >
+      <div className="welcome-banner bg-gradient-primary">
         <p className="welcome-banner__greeting">Báo cáo tổng quan,</p>
         <h2 className="welcome-banner__name">{user?.name}</h2>
         <p className="welcome-banner__summary">
-          {loading ? (
-            <Spinner size="sm" className="inline-spinner" />
-          ) : (
-            `Tổng doanh thu: ${formatCurrency(totalRevenue)} · ${pendingOrders} đơn đang chờ · ${inProgressBatches} lô đang sản xuất`
-          )}
+          {`Tổng doanh thu: ${formatCurrency(totalRevenue)} · ${pendingOrders} đơn đang chờ · ${inProgressBatches} lô đang sản xuất`}
         </p>
       </div>
 
@@ -119,25 +150,25 @@ export default function ManagerDashboard() {
       <div className="dashboard-stats">
         <StatCard
           label="Tổng doanh thu"
-          value={loading ? "..." : formatCurrency(totalRevenue)}
+          value={formatCurrency(totalRevenue)}
           icon={DollarSign}
           color="primary"
         />
         <StatCard
           label="Đơn hàng chờ xử lý"
-          value={loading ? "..." : pendingOrders}
+          value={pendingOrders}
           icon={ClipboardList}
           color="warning"
         />
         <StatCard
           label="Lô đang sản xuất"
-          value={loading ? "..." : inProgressBatches}
+          value={inProgressBatches}
           icon={Layers}
           color="info"
         />
         <StatCard
           label="KH sản xuất đang chạy"
-          value={loading ? "..." : activeProductionPlans}
+          value={activeProductionPlans}
           icon={FlaskConical}
           color="accent"
         />
@@ -147,25 +178,25 @@ export default function ManagerDashboard() {
       <div className="dashboard-stats" style={{ marginTop: "var(--space-3)" }}>
         <StatCard
           label="Tổng sản phẩm"
-          value={loading ? "..." : totalProducts}
+          value={totalProducts}
           icon={Package}
           color="primary"
         />
         <StatCard
           label="Công thức nấu ăn"
-          value={loading ? "..." : totalRecipes}
+          value={totalRecipes}
           icon={BookOpen}
           color="info"
         />
         <StatCard
           label="Hàng sắp hết (bếp + CH)"
-          value={loading ? "..." : lowStockKitchenItems + lowStockStoreItems}
+          value={lowStockKitchenItems + lowStockStoreItems}
           icon={AlertTriangle}
           color="warning"
         />
         <StatCard
           label="Tổng số thanh lý"
-          value={loading ? "..." : totalDisposedQuantity}
+          value={totalDisposedQuantity}
           icon={Trash2}
           color="danger"
         />
@@ -184,14 +215,27 @@ export default function ManagerDashboard() {
         {/* Bar chart: production overview */}
         <div className="dashboard-section card-gradient">
           <div className="dashboard-section__header">
-            <h3 className="dashboard-section__title">Tổng quan sản xuất & đơn hàng</h3>
+            <h3 className="dashboard-section__title">
+              Tổng quan sản xuất & đơn hàng
+            </h3>
           </div>
           <div className="dashboard-section__body">
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={productionChartData} barSize={36}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--surface-border)" />
-                <XAxis dataKey="name" fontSize={12} tick={{ fill: "var(--text-secondary)" }} />
-                <YAxis fontSize={12} tick={{ fill: "var(--text-secondary)" }} allowDecimals={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--surface-border)"
+                />
+                <XAxis
+                  dataKey="name"
+                  fontSize={12}
+                  tick={{ fill: "var(--text-secondary)" }}
+                />
+                <YAxis
+                  fontSize={12}
+                  tick={{ fill: "var(--text-secondary)" }}
+                  allowDecimals={false}
+                />
                 <Tooltip
                   contentStyle={{
                     background: "var(--surface-card)",
@@ -200,7 +244,12 @@ export default function ManagerDashboard() {
                     fontSize: "13px",
                   }}
                 />
-                <Bar dataKey="value" name="Số lượng" fill="var(--primary)" radius={[6, 6, 0, 0]} />
+                <Bar
+                  dataKey="value"
+                  name="Số lượng"
+                  fill="var(--primary)"
+                  radius={[6, 6, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -215,7 +264,11 @@ export default function ManagerDashboard() {
             <ResponsiveContainer width="100%" height={260}>
               <RadarChart data={inventoryRadarData}>
                 <PolarGrid stroke="var(--surface-border)" />
-                <PolarAngleAxis dataKey="subject" fontSize={11} tick={{ fill: "var(--text-secondary)" }} />
+                <PolarAngleAxis
+                  dataKey="subject"
+                  fontSize={11}
+                  tick={{ fill: "var(--text-secondary)" }}
+                />
                 <Radar
                   name="Số lượng"
                   dataKey="value"
@@ -272,7 +325,8 @@ export default function ManagerDashboard() {
                   >
                     <span>{item.ingredientName || item.name}</span>
                     <Badge variant="warning">
-                      {item.quantity ?? item.currentStock} / {item.minStock} {item.unit}
+                      {item.quantity ?? item.currentStock} / {item.minStock}{" "}
+                      {item.unit}
                     </Badge>
                   </div>
                 ))}
@@ -305,15 +359,24 @@ export default function ManagerDashboard() {
                     }}
                   >
                     <div>
-                      <span style={{ fontWeight: 500 }}>{item.productName || item.name}</span>
+                      <span style={{ fontWeight: 500 }}>
+                        {item.productName || item.name}
+                      </span>
                       {item.storeName && (
-                        <span style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 6 }}>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: "var(--text-muted)",
+                            marginLeft: 6,
+                          }}
+                        >
                           {item.storeName}
                         </span>
                       )}
                     </div>
                     <Badge variant="danger">
-                      {item.quantity ?? item.currentStock} / {item.minStock} {item.unit}
+                      {item.quantity ?? item.currentStock} / {item.minStock}{" "}
+                      {item.unit}
                     </Badge>
                   </div>
                 ))}

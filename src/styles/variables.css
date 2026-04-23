@@ -55,8 +55,6 @@
   --gradient-soft: linear-gradient(135deg, #f2f5f3 0%, #faf9f6 100%);
   --gradient-card: linear-gradient(135deg, #ffffff 0%, #faf9f6 100%);
 
-
-
   /* ---- Typography ---- */
   --font-body: "Nunito Sans", sans-serif;
   --font-heading: "Outfit", sans-serif;
@@ -104,12 +102,14 @@
   /* ---- Shadows (Warmer & Softer) ---- */
   --shadow-xs: 0 1px 2px rgba(56, 102, 65, 0.04);
   --shadow-sm: 0 2px 4px rgba(56, 102, 65, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 4px 12px rgba(56, 102, 65, 0.06), 0 2px 4px rgba(0, 0, 0, 0.02);
-  --shadow-lg: 0 12px 24px rgba(56, 102, 65, 0.08), 0 4px 8px rgba(0, 0, 0, 0.02);
-  --shadow-xl: 0 20px 40px rgba(56, 102, 65, 0.1), 0 8px 16px rgba(0, 0, 0, 0.02);
+  --shadow-md:
+    0 4px 12px rgba(56, 102, 65, 0.06), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-lg:
+    0 12px 24px rgba(56, 102, 65, 0.08), 0 4px 8px rgba(0, 0, 0, 0.02);
+  --shadow-xl:
+    0 20px 40px rgba(56, 102, 65, 0.1), 0 8px 16px rgba(0, 0, 0, 0.02);
   --shadow-glow-primary: 0 0 24px rgba(56, 102, 65, 0.15);
   --shadow-glow-accent: 0 0 24px rgba(188, 71, 73, 0.15);
-
 
   /* ---- Glass ---- */
   --glass-bg: rgba(255, 255, 255, 0.7);
@@ -176,6 +176,10 @@
   --sidebar-text-active: #fafaf9;
   --sidebar-hover: rgba(255, 255, 255, 0.06);
   --sidebar-active-bg: rgba(64, 145, 108, 0.2);
+
+  --gradient-card: linear-gradient(135deg, #292524 0%, #1c1917 100%);
+  --gradient-surface: linear-gradient(180deg, #1c1917 0%, #14110f 100%);
+  --gradient-soft: linear-gradient(135deg, #292524 0%, #1c1917 100%);
 
   --glass-bg: rgba(41, 37, 36, 0.7);
   --glass-border: rgba(68, 64, 60, 0.5);
