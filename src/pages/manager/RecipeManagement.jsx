@@ -216,6 +216,10 @@ export default function RecipeManagement() {
     setSelectedIdxs(new Set());
     try {
       const results = await suggestIngredients(selectedProduct.name, ingredients);
+      if (!results.length) {
+        toast("Kho hiện tại không có nguyên liệu phù hợp cho món này", { icon: "⚠️" });
+        return;
+      }
       setAiSuggestions(results);
       setSelectedIdxs(new Set(results.map((_, i) => i)));
       setSuggestionQtys(Object.fromEntries(results.map((s, i) => [i, s.quantity])));
@@ -764,7 +768,7 @@ export default function RecipeManagement() {
                           : "1.5px solid var(--surface-border)",
                         backgroundColor: isSelected
                           ? "var(--primary-bg)"
-                          : "#fff",
+                          : "var(--surface-card)",
                         cursor: "pointer",
                         transition: "all 0.15s ease",
                         userSelect: "none",
@@ -800,6 +804,11 @@ export default function RecipeManagement() {
                             {s.ingredientId}
                           </span>
                         </div>
+                        {s.reason && (
+                          <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "3px", fontStyle: "italic" }}>
+                            {s.reason}
+                          </div>
+                        )}
                         <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>
                           <input
                             type="number"
