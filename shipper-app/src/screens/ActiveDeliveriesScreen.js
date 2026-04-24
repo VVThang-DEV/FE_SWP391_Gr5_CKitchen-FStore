@@ -50,6 +50,20 @@ const STATUS_META = {
   FAILED: { label: "Giao thất bại", color: T.colors.textMuted, dot: "🔴" },
 };
 
+function openMaps(delivery) {
+  if (delivery.storeLatitude && delivery.storeLongitude) {
+    const url = Platform.select({
+      ios: `maps:0,0?q=${delivery.storeLatitude},${delivery.storeLongitude}`,
+      android: `google.navigation:q=${delivery.storeLatitude},${delivery.storeLongitude}`,
+    });
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(
+        `https://www.google.com/maps/dir/?api=1&destination=${delivery.storeLatitude},${delivery.storeLongitude}`,
+      );
+    });
+  }
+}
+
 export default function ActiveDeliveriesScreen() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -423,21 +437,42 @@ export default function ActiveDeliveriesScreen() {
                   </View>
                 )}
 
+                {/* ── Destination card (prominent) ─── */}
+                {(detailItem.storeName || detailItem.storeAddress) && (
+                  <View style={styles.destinationCard}>
+                    <Text style={styles.destinationLabel}>📍 GIAO ĐẾN</Text>
+                    <Text style={styles.destinationName}>
+                      🏪 {detailItem.storeName || "Cửa hàng"}
+                    </Text>
+                    {detailItem.storeAddress && (
+                      <Text style={styles.destinationAddress}>
+                        {detailItem.storeAddress}
+                      </Text>
+                    )}
+                    {detailItem.distance != null && (
+                      <Text style={styles.destinationDistance}>
+                        📏 {Number(detailItem.distance).toFixed(1)} km
+                      </Text>
+                    )}
+                    {(detailItem.storeLatitude || detailItem.storeLongitude) && (
+                      <TouchableOpacity
+                        style={styles.destinationMapBtn}
+                        onPress={() => openMaps(detailItem)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.destinationMapBtnText}>
+                          🗺️ Mở bản đồ chỉ đường
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
                 {/* ── Delivery info section ─── */}
-                <Text style={styles.detailSection}>Thông tin giao hàng</Text>
+                <Text style={styles.detailSection}>Thông tin vận đơn</Text>
                 {[
-                  ["Vận đơn", detailItem.id],
-                  ["Cửa hàng", detailItem.storeName],
-                  ["Địa chỉ", detailItem.storeAddress],
-                  [
-                    "Khoảng cách",
-                    detailItem.distance != null
-                      ? `${Number(detailItem.distance).toFixed(1)} km`
-                      : null,
-                  ],
-                ]
-                  .filter(([, v]) => v)
-                  .map(([label, value]) => (
+                  ["Mã vận đơn", detailItem.id],
+                ].filter(([, v]) => v).map(([label, value]) => (
                     <View key={label} style={styles.detailRow}>
                       <Text style={styles.detailLabel}>{label}</Text>
                       <Text style={styles.detailValue}>{value}</Text>
@@ -787,4 +822,51 @@ const styles = StyleSheet.create({
     borderRadius: T.radius.md,
   },
   notesBoxText: { fontSize: 13, color: T.colors.textMid },
+
+  // Destination card
+  destinationCard: {
+    backgroundColor: "rgba(45,106,79,0.06)",
+    borderWidth: 1.5,
+    borderColor: T.colors.primary,
+    borderRadius: T.radius.lg,
+    padding: 14,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  destinationLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    color: T.colors.primary,
+    marginBottom: 8,
+  },
+  destinationName: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: T.colors.textDark,
+    marginBottom: 4,
+  },
+  destinationAddress: {
+    fontSize: 13,
+    color: T.colors.textMid,
+    marginBottom: 4,
+  },
+  destinationDistance: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: T.colors.accent,
+    marginBottom: 8,
+  },
+  destinationMapBtn: {
+    backgroundColor: T.colors.primary,
+    borderRadius: T.radius.md,
+    paddingVertical: 10,
+    alignItems: "center",
+    marginTop: 4,
+  },
+  destinationMapBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
+  },
 });
