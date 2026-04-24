@@ -24,19 +24,19 @@ function isExpiringSoon(date) {
 
 const TAB_STYLES = {
   base: {
-    padding: "8px 20px",
-    borderRadius: "var(--radius-md)",
-    border: "1px solid var(--border)",
+    padding: "6px 20px",
+    borderRadius: "var(--radius-full)",
+    border: "1.5px solid var(--surface-border)",
     cursor: "pointer",
-    fontSize: "14px",
+    fontSize: "13px",
     fontWeight: 500,
-    transition: "all 0.15s",
-    background: "transparent",
+    transition: "all 200ms ease",
+    background: "var(--surface-card)",
     color: "var(--text-secondary)",
   },
   active: {
-    background: "var(--primary)",
-    color: "#fff",
+    background: "var(--primary-bg)",
+    color: "var(--primary)",
     borderColor: "var(--primary)",
   },
 };
@@ -111,11 +111,21 @@ export default function KitchenInventory() {
     { header: "Nguyên liệu", accessor: "ingredientName", sortable: true },
     {
       header: "Lô",
-      render: (r) => (
-        <span className="font-mono" style={{ fontSize: "12px" }}>
-          {r.batches?.[0]?.batchNo || "—"}
-        </span>
-      ),
+      render: (r) => {
+        const count = r.batches?.length ?? 0;
+        const first = r.batches?.[0]?.batchNo;
+        if (!first) return "—";
+        return (
+          <span className="font-mono" style={{ fontSize: "12px" }}>
+            {first}
+            {count > 1 && (
+              <span style={{ color: "var(--text-muted)", marginLeft: "4px" }}>
+                +{count - 1}
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     { header: "Nhà cung cấp", render: (r) => r.batches?.[0]?.supplier || "—" },
     {
@@ -139,11 +149,15 @@ export default function KitchenInventory() {
       render: (r) => `${r.minStock} ${r.unit}`,
     },
     {
-      header: "Hạn SD",
+      header: "Hạn SD gần nhất",
       render: (row) => {
-        const expiry = row.batches?.[0]?.expiryDate;
+        // Find earliest expiry across all batches
+        const expiry = row.batches
+          ?.filter((b) => b.expiryDate)
+          .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))[0]
+          ?.expiryDate;
         const expired = isExpired(expiry);
-        const expiring = isExpiringSoon(expiry);
+        const expiring = isExpiringSoon(expiry) || row.batches?.some((b) => b.nearExpiry);
         return (
           <span
             style={{
@@ -162,7 +176,10 @@ export default function KitchenInventory() {
     {
       header: "Trạng thái",
       render: (row) => {
-        const expiry = row.batches?.[0]?.expiryDate;
+        const expiry = row.batches
+          ?.filter((b) => b.expiryDate)
+          .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))[0]
+          ?.expiryDate;
         if (isExpired(expiry) && row.totalQuantity > 0)
           return (
             <Badge variant="danger" dot>
@@ -175,7 +192,7 @@ export default function KitchenInventory() {
               Cần bổ sung
             </Badge>
           );
-        if (isExpiringSoon(expiry))
+        if (isExpiringSoon(expiry) || row.batches?.some((b) => b.nearExpiry))
           return (
             <Badge variant="warning" dot>
               Sắp hết hạn
@@ -203,24 +220,27 @@ export default function KitchenInventory() {
     },
     {
       header: "Tồn kho",
-      accessor: "totalQuantity",
+      accessor: "totalRemainingQuantity",
       sortable: true,
       render: (row) => (
         <span
           style={{
             fontWeight: 600,
             color:
-              row.totalQuantity === 0 ? "var(--danger)" : "var(--text-primary)",
+              (row.totalRemainingQuantity ?? 0) === 0 ? "var(--danger)" : "var(--text-primary)",
           }}
         >
-          {row.totalQuantity} {row.unit || "cái"}
+          {row.totalRemainingQuantity ?? 0} {row.unit || "cái"}
         </span>
       ),
     },
     {
       header: "Lô gần nhất hết hạn",
       render: (r) => {
-        const expiry = r.nearestExpiryDate || r.batches?.[0]?.expiryDate;
+        const expiry = r.batches
+          ?.filter((b) => b.expiryDate)
+          .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))[0]
+          ?.expiryDate;
         const expired = isExpired(expiry);
         const expiring = isExpiringSoon(expiry);
         return (
@@ -241,13 +261,16 @@ export default function KitchenInventory() {
     {
       header: "Trạng thái",
       render: (row) => {
-        if (row.totalQuantity === 0)
+        if ((row.totalRemainingQuantity ?? 0) === 0)
           return (
             <Badge variant="neutral" dot>
               Hết hàng
             </Badge>
           );
-        const expiry = row.nearestExpiryDate || row.batches?.[0]?.expiryDate;
+        const expiry = row.batches
+          ?.filter((b) => b.expiryDate)
+          .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))[0]
+          ?.expiryDate;
         if (isExpired(expiry))
           return (
             <Badge variant="danger" dot>

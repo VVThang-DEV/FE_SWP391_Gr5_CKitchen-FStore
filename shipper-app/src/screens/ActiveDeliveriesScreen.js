@@ -11,8 +11,11 @@ import {
   TextInput,
   ActivityIndicator,
   StatusBar,
+  Linking,
+  ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import * as Location from "expo-location";
 import shipperService from "../services/shipperService";
 import T from "../theme";
 
@@ -42,20 +45,42 @@ export default function ActiveDeliveriesScreen() {
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [coords, setCoords] = useState(null);
+  const [detailItem, setDetailItem] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+  const getCoords = useCallback(async () => {
     try {
-      const data = await shipperService.getMyActiveOrders();
-      setOrders(data?.content ?? data ?? []);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return null;
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const c = { lat: loc.coords.latitude, lon: loc.coords.longitude };
+      setCoords(c);
+      return c;
     } catch {
-      Alert.alert("Lỗi", "Không thể tải danh sách đơn đang giao");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      return null;
     }
   }, []);
+
+  const load = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      try {
+        const c = coords ?? (await getCoords());
+        const data = await shipperService.getMyActiveOrders(c ?? {});
+        setOrders(data?.content ?? data ?? []);
+      } catch {
+        Alert.alert("Lỗi", "Không thể tải danh sách đơn đang giao");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [coords, getCoords],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -85,6 +110,31 @@ export default function ActiveDeliveriesScreen() {
     }
   };
 
+  const openMaps = (item) => {
+    const lat = item.storeLatitude;
+    const lon = item.storeLongitude;
+    if (!lat || !lon) {
+      Alert.alert("Không có tọa độ", "Cửa hàng này chưa có vị trí GPS.");
+      return;
+    }
+    const label = encodeURIComponent(item.storeName || "Cửa hàng");
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&destination_place_id=${label}`;
+    Linking.openURL(url).catch(() => Alert.alert("Lỗi", "Không thể mở bản đồ"));
+  };
+
+  const openDetail = async (item) => {
+    setDetailItem(item); // show immediately with list data
+    setDetailLoading(true);
+    try {
+      const fresh = await shipperService.getDeliveryById(item.id);
+      setDetailItem(fresh);
+    } catch {
+      // keep list data — detail endpoint may not exist
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   const renderItem = ({ item }) => {
     const meta = STATUS_META[item.status] ?? {
       label: item.status,
@@ -94,24 +144,37 @@ export default function ActiveDeliveriesScreen() {
     const canMarkSuccess = item.status === "SHIPPING";
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => openDetail(item)}
+        style={styles.card}
+      >
         <View style={[styles.cardAccent, { backgroundColor: meta.color }]} />
         <View style={styles.cardBody}>
           {/* Header */}
           <View style={styles.cardHeader}>
             <Text style={styles.orderId}>#{item.orderId}</Text>
-            <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: meta.color + "18",
-                  borderColor: meta.color + "40",
-                },
-              ]}
-            >
-              <Text style={[styles.badgeText, { color: meta.color }]}>
-                {meta.dot} {meta.label}
-              </Text>
+            <View style={styles.badgeRow}>
+              {item.distance != null && (
+                <View style={styles.distanceBadge}>
+                  <Text style={styles.distanceBadgeText}>
+                    📍 {Number(item.distance).toFixed(1)} km
+                  </Text>
+                </View>
+              )}
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: meta.color + "18",
+                    borderColor: meta.color + "40",
+                  },
+                ]}
+              >
+                <Text style={[styles.badgeText, { color: meta.color }]}>
+                  {meta.dot} {meta.label}
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -141,6 +204,17 @@ export default function ActiveDeliveriesScreen() {
             </View>
           )}
 
+          {/* Open Maps button (if coords available) */}
+          {(item.storeLatitude || item.storeLongitude) && (
+            <TouchableOpacity
+              style={styles.mapsBtn}
+              onPress={() => openMaps(item)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.mapsBtnText}>🗺️ Mở bản đồ</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Divider + CTA */}
           {canMarkSuccess && (
             <>
@@ -155,7 +229,7 @@ export default function ActiveDeliveriesScreen() {
             </>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -179,9 +253,7 @@ export default function ActiveDeliveriesScreen() {
       ) : (
         <FlatList
           data={orders}
-          keyExtractor={(item) =>
-            item.id || String(item.orderId)
-          }
+          keyExtractor={(item) => item.id || String(item.orderId)}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           refreshControl={
@@ -255,6 +327,95 @@ export default function ActiveDeliveriesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Detail bottom sheet */}
+      <Modal
+        visible={!!detailItem}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDetailItem(null)}
+      >
+        <View style={styles.overlay}>
+          <TouchableOpacity
+            style={styles.overlayBg}
+            onPress={() => setDetailItem(null)}
+          />
+          <View style={[styles.sheet, { maxHeight: "80%" }]}>
+            <View style={styles.handle} />
+            <Text style={styles.sheetTitle}>Chi tiết vận đơn</Text>
+            {detailItem && (
+              <Text style={styles.sheetSub}>
+                Đơn hàng:{" "}
+                <Text style={{ fontWeight: "700", color: T.colors.textDark }}>
+                  #{detailItem.orderId}
+                </Text>
+              </Text>
+            )}
+
+            {detailLoading && (
+              <ActivityIndicator
+                color={T.colors.primary}
+                style={{ marginVertical: 16 }}
+              />
+            )}
+
+            {detailItem && (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={{ marginTop: 8 }}
+              >
+                {/* Meta info */}
+                {[
+                  ["Vận đơn", detailItem.id],
+                  ["Cửa hàng", detailItem.storeName],
+                  ["Địa chỉ", detailItem.storeAddress],
+                  ["Nhận lúc", detailItem.pickedUpAt ? formatDateTime(detailItem.pickedUpAt) : null],
+                  ["Giao lúc", detailItem.deliveredAt ? formatDateTime(detailItem.deliveredAt) : null],
+                  ["Khoảng cách", detailItem.distance != null ? `${Number(detailItem.distance).toFixed(1)} km` : null],
+                ]
+                  .filter(([, v]) => v)
+                  .map(([label, value]) => (
+                    <View key={label} style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>{label}</Text>
+                      <Text style={styles.detailValue}>{value}</Text>
+                    </View>
+                  ))}
+
+                {/* Items */}
+                {detailItem.items?.length > 0 && (
+                  <>
+                    <Text style={styles.detailSection}>Sản phẩm</Text>
+                    {detailItem.items.map((it, i) => (
+                      <View key={i} style={styles.itemRow}>
+                        <Text style={styles.itemName} numberOfLines={2}>
+                          {it.productName}
+                        </Text>
+                        <Text style={styles.itemQty}>x{it.quantity}</Text>
+                      </View>
+                    ))}
+                  </>
+                )}
+
+                {/* Notes */}
+                {detailItem.notes && (
+                  <View style={styles.notesBox}>
+                    <Text style={styles.notesBoxText}>
+                      📝 {detailItem.notes}
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+
+            <TouchableOpacity
+              style={[styles.cancelBtn, { marginTop: 16 }]}
+              onPress={() => setDetailItem(null)}
+            >
+              <Text style={styles.cancelBtnText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -310,6 +471,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeText: { fontSize: 11, fontWeight: "700" },
+  badgeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  distanceBadge: {
+    backgroundColor: T.colors.accentBg,
+    borderRadius: T.radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "rgba(231,111,81,0.22)",
+  },
+  distanceBadgeText: {
+    color: T.colors.accent,
+    fontSize: 11,
+    fontWeight: "700",
+  },
 
   metaRow: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
   metaIcon: { fontSize: 13, marginRight: 8, width: 18 },
@@ -320,6 +495,17 @@ const styles = StyleSheet.create({
     backgroundColor: T.colors.surfaceBorder,
     marginVertical: 12,
   },
+  mapsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: T.colors.primary,
+    borderRadius: T.radius.md,
+    paddingVertical: 8,
+    marginTop: 10,
+  },
+  mapsBtnText: { color: T.colors.primary, fontWeight: "700", fontSize: 13 },
   doneBtn: {
     backgroundColor: T.colors.accent,
     borderRadius: T.radius.md,
@@ -400,4 +586,53 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelBtnText: { color: T.colors.textMid, fontWeight: "600", fontSize: 14 },
+
+  // Detail sheet
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: T.colors.surfaceBorder,
+    gap: 12,
+  },
+  detailLabel: { fontSize: 13, color: T.colors.textMuted, flexShrink: 0 },
+  detailValue: {
+    fontSize: 13,
+    color: T.colors.textDark,
+    fontWeight: "500",
+    textAlign: "right",
+    flex: 1,
+  },
+  detailSection: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: T.colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: T.colors.surfaceBorder,
+  },
+  itemName: { fontSize: 13, color: T.colors.textDark, flex: 1 },
+  itemQty: {
+    fontSize: 13,
+    color: T.colors.accent,
+    fontWeight: "700",
+    marginLeft: 12,
+  },
+  notesBox: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: T.colors.surfaceBorder,
+    borderRadius: T.radius.md,
+  },
+  notesBoxText: { fontSize: 13, color: T.colors.textMid },
 });
