@@ -386,7 +386,7 @@ export default function KitchenOrders({
                 p.productId === item.productId ||
                 p.productName === item.productName,
             );
-            const available = found?.totalQuantity ?? 0;
+            const available = found?.totalRemainingQuantity ?? found?.totalQuantity ?? 0;
             return {
               name: item.productName,
               needed: item.quantity,

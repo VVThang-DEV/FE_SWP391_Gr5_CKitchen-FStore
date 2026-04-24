@@ -36,42 +36,36 @@ const STATUS_META = {
 
 export default function MapScreen() {
   const [deliveries, setDeliveries] = useState([]);
-  const [availableOrders, setAvailableOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userCoords, setUserCoords] = useState(null);
-  const [viewMode, setViewMode] = useState("active"); // "active" | "available"
   const webViewRef = useRef(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // Get user location
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      // Get location (non-blocking — map works without it)
       let coords = null;
-      if (status === "granted") {
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        coords = { lat: loc.coords.latitude, lon: loc.coords.longitude };
-        setUserCoords(coords);
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          coords = { lat: loc.coords.latitude, lon: loc.coords.longitude };
+          setUserCoords(coords);
+        }
+      } catch (locErr) {
+        console.warn("Location unavailable:", locErr.message);
       }
 
-      // Load both datasets in parallel
-      const [active, available] = await Promise.allSettled([
-        shipperService.getMyActiveOrders(coords ?? {}),
-        shipperService.getAvailableOrders(coords ?? {}),
-      ]);
-
-      if (active.status === "fulfilled") {
-        const data = active.value;
+      // Load deliveries
+      try {
+        const data = await shipperService.getMyActiveOrders(coords ?? {});
         setDeliveries(data?.content ?? data ?? []);
+      } catch (apiErr) {
+        console.error("API error:", apiErr);
+        Alert.alert("Lỗi", "Không thể tải dữ liệu giao hàng. Kiểm tra kết nối mạng.");
       }
-      if (available.status === "fulfilled") {
-        const data = available.value;
-        setAvailableOrders(data?.content ?? data ?? []);
-      }
-    } catch {
-      Alert.alert("Lỗi", "Không thể tải dữ liệu bản đồ");
     } finally {
       setLoading(false);
     }
@@ -83,98 +77,45 @@ export default function MapScreen() {
     }, [loadData]),
   );
 
-  // Build markers for the selected view
-  const markers =
-    viewMode === "active"
-      ? deliveries
-          .filter((d) => d.storeLatitude && d.storeLongitude)
-          .map((d) => ({
-            lat: d.storeLatitude,
-            lon: d.storeLongitude,
-            name: d.storeName || "Cửa hàng",
-            address: d.storeAddress || "",
-            orderId: d.orderId,
-            distance: d.distance,
-            status: d.status,
-            color: STATUS_META[d.status]?.color || "#e76f51",
-            label: STATUS_META[d.status]?.label || d.status,
-          }))
-      : availableOrders
-          .filter((o) => o.storeLatitude && o.storeLongitude)
-          .map((o) => ({
-            lat: o.storeLatitude,
-            lon: o.storeLongitude,
-            name: o.storeName || "Cửa hàng",
-            address: o.storeAddress || "",
-            orderId: o.id || o.orderId,
-            distance: o.distance,
-            status: "AVAILABLE",
-            color: "#2d6a4f",
-            label: "Chờ nhận",
-          }));
+  // Build markers — only active deliveries have GPS
+  const markers = deliveries
+    .filter((d) => d.storeLatitude && d.storeLongitude)
+    .map((d) => ({
+      lat: d.storeLatitude,
+      lon: d.storeLongitude,
+      name: d.storeName || "Cửa hàng",
+      address: d.storeAddress || "",
+      orderId: d.orderId,
+      deliveryId: d.id,
+      distance: d.distance,
+      status: d.status,
+      color: STATUS_META[d.status]?.color || "#e76f51",
+      label: STATUS_META[d.status]?.label || d.status,
+    }));
 
-  const totalActive = deliveries.filter(
-    (d) => d.storeLatitude && d.storeLongitude,
-  ).length;
-  const totalAvailable = availableOrders.filter(
-    (o) => o.storeLatitude && o.storeLongitude,
-  ).length;
-
-  // Generate Leaflet HTML
   const mapHtml = generateMapHtml(userCoords, markers);
+
+  // Summary info
+  const withGps = markers.length;
+  const withoutGps = deliveries.length - withGps;
+  const nearest =
+    markers.filter((m) => m.distance != null).length > 0
+      ? Math.min(...markers.filter((m) => m.distance != null).map((m) => m.distance))
+      : null;
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={T.colors.primaryDark}
-      />
+      <StatusBar barStyle="light-content" backgroundColor={T.colors.primaryDark} />
 
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerLabel}>CKITCHEN SHIPPER</Text>
         <Text style={styles.headerTitle}>Bản đồ giao hàng</Text>
+        <Text style={styles.headerSub}>
+          {deliveries.length} đơn đang giao
+          {withoutGps > 0 && ` · ${withoutGps} chưa có GPS`}
+        </Text>
       </View>
 
-      {/* View mode toggle */}
-      <View style={styles.toggleRow}>
-        <TouchableOpacity
-          style={[
-            styles.toggleBtn,
-            viewMode === "active" && styles.toggleBtnActive,
-          ]}
-          onPress={() => setViewMode("active")}
-          activeOpacity={0.8}
-        >
-          <Text
-            style={[
-              styles.toggleText,
-              viewMode === "active" && styles.toggleTextActive,
-            ]}
-          >
-            🚚 Đang giao ({totalActive})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.toggleBtn,
-            viewMode === "available" && styles.toggleBtnActive,
-          ]}
-          onPress={() => setViewMode("available")}
-          activeOpacity={0.8}
-        >
-          <Text
-            style={[
-              styles.toggleText,
-              viewMode === "available" && styles.toggleTextActive,
-            ]}
-          >
-            📦 Chờ nhận ({totalAvailable})
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Map */}
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={T.colors.primary} />
@@ -185,9 +126,9 @@ export default function MapScreen() {
           <Text style={styles.emptyIcon}>🗺️</Text>
           <Text style={styles.emptyTitle}>Không có điểm giao nào</Text>
           <Text style={styles.emptySub}>
-            {viewMode === "active"
-              ? "Bạn chưa có đơn đang giao"
-              : "Không có đơn chờ nhận"}
+            {deliveries.length > 0
+              ? "Các đơn hiện tại chưa có tọa độ GPS"
+              : "Bạn chưa có đơn đang giao"}
           </Text>
         </View>
       ) : (
@@ -211,21 +152,19 @@ export default function MapScreen() {
           <View style={styles.summaryStrip}>
             <Text style={styles.summaryText}>
               📍 {markers.length} điểm giao
-              {markers.some((m) => m.distance != null) && (
-                <>
-                  {" · "}Gần nhất:{" "}
-                  {Number(
-                    Math.min(
-                      ...markers
-                        .filter((m) => m.distance != null)
-                        .map((m) => m.distance),
-                    ),
-                  ).toFixed(1)}{" "}
-                  km
-                </>
-              )}
+              {nearest != null && ` · Gần nhất: ${nearest.toFixed(1)} km`}
+              {nearest != null && ` (${formatMinutes(estimateMinutes(nearest))})`}
             </Text>
           </View>
+
+          {/* Refresh button */}
+          <TouchableOpacity
+            style={styles.refreshBtn}
+            onPress={loadData}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.refreshBtnText}>🔄</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -233,10 +172,9 @@ export default function MapScreen() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Generate Leaflet HTML (OpenStreetMap — no API key needed)
+// Leaflet HTML (OpenStreetMap — no API key)
 // ═══════════════════════════════════════════════════════════════════════════════
 function generateMapHtml(userCoords, markers) {
-  // Default center: HCM City
   const center = userCoords
     ? { lat: userCoords.lat, lon: userCoords.lon }
     : markers.length > 0
@@ -247,8 +185,7 @@ function generateMapHtml(userCoords, markers) {
     markers.map((m) => ({
       ...m,
       estTime: formatMinutes(estimateMinutes(m.distance)),
-      distStr:
-        m.distance != null ? `${Number(m.distance).toFixed(1)} km` : null,
+      distStr: m.distance != null ? `${Number(m.distance).toFixed(1)} km` : null,
     })),
   );
 
@@ -260,7 +197,7 @@ function generateMapHtml(userCoords, markers) {
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     html,body,#map { width:100%; height:100%; }
@@ -336,43 +273,41 @@ function generateMapHtml(userCoords, markers) {
     var user = ${userJson};
     var bounds = [];
 
-    // User location marker
     if (user) {
       var userIcon = L.divIcon({
         className: '',
-        html: '<div class="user-marker"></div>',
+        html: '<div class="user-marker"><\\/div>',
         iconSize: [16, 16],
         iconAnchor: [8, 8]
       });
       L.marker([user.lat, user.lon], { icon: userIcon, zIndexOffset: 1000 })
         .addTo(map)
-        .bindPopup('<div class="popup-card"><h3>📍 Vị trí của bạn</h3></div>');
+        .bindPopup('<div class="popup-card"><h3>📍 Vị trí của bạn<\\/h3><\\/div>');
       bounds.push([user.lat, user.lon]);
     }
 
-    // Delivery markers
     markers.forEach(function(m, i) {
       var popupHtml = '<div class="popup-card">' +
-        '<h3>🏪 ' + m.name + '</h3>' +
-        (m.address ? '<div class="meta">' + m.address + '</div>' : '') +
-        '<div class="meta">Đơn: <strong>#' + m.orderId + '</strong></div>' +
-        '<div class="badge" style="background:' + m.color + '18;color:' + m.color + ';border:1px solid ' + m.color + '40">' + m.label + '</div>';
+        '<h3>🏪 ' + m.name + '<\\/h3>' +
+        (m.address ? '<div class="meta">📍 ' + m.address + '<\\/div>' : '') +
+        '<div class="meta">Đơn: <strong>#' + m.orderId + '<\\/strong><\\/div>' +
+        '<div class="badge" style="background:' + m.color + '18;color:' + m.color + ';border:1px solid ' + m.color + '40">' + m.label + '<\\/div>';
       
       if (m.distStr || m.estTime) {
         popupHtml += '<div class="distance-row">';
         if (m.distStr) {
-          popupHtml += '<div class="dist-item"><div class="dist-value">' + m.distStr + '</div><div class="dist-label">Khoảng cách</div></div>';
+          popupHtml += '<div class="dist-item"><div class="dist-value">' + m.distStr + '<\\/div><div class="dist-label">Khoảng cách<\\/div><\\/div>';
         }
         if (m.estTime) {
-          popupHtml += '<div class="dist-item"><div class="dist-value">' + m.estTime + '</div><div class="dist-label">Ước tính</div></div>';
+          popupHtml += '<div class="dist-item"><div class="dist-value">' + m.estTime + '<\\/div><div class="dist-label">Ước tính<\\/div><\\/div>';
         }
-        popupHtml += '</div>';
+        popupHtml += '<\\/div>';
       }
-      popupHtml += '</div>';
+      popupHtml += '<\\/div>';
 
       var markerIcon = L.divIcon({
         className: '',
-        html: '<div style="width:32px;height:32px;border-radius:50% 50% 50% 0;background:' + m.color + ';transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);color:#fff;font-size:12px;font-weight:800">' + (i+1) + '</span></div>',
+        html: '<div style="width:32px;height:32px;border-radius:50% 50% 50% 0;background:' + m.color + ';transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);color:#fff;font-size:12px;font-weight:800">' + (i+1) + '<\\/span><\\/div>',
         iconSize: [32, 32],
         iconAnchor: [16, 32],
         popupAnchor: [0, -32]
@@ -385,13 +320,12 @@ function generateMapHtml(userCoords, markers) {
       bounds.push([m.lat, m.lon]);
     });
 
-    // Fit all markers in view
     if (bounds.length > 1) {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
     } else if (bounds.length === 1) {
       map.setView(bounds[0], 14);
     }
-  </script>
+  <\/script>
 </body>
 </html>`;
 }
@@ -412,36 +346,10 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   headerTitle: { color: "#fff", fontSize: 20, fontWeight: "800" },
-
-  toggleRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: T.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: T.colors.surfaceBorder,
-  },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: T.radius.lg,
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: T.colors.surfaceBorder,
-    backgroundColor: "#fff",
-  },
-  toggleBtnActive: {
-    backgroundColor: T.colors.primaryBg,
-    borderColor: T.colors.primary,
-  },
-  toggleText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: T.colors.textMuted,
-  },
-  toggleTextActive: {
-    color: T.colors.primary,
+  headerSub: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 12,
+    marginTop: 4,
   },
 
   mapContainer: { flex: 1 },
@@ -475,6 +383,22 @@ const styles = StyleSheet.create({
     color: T.colors.textDark,
     textAlign: "center",
   },
+
+  refreshBtn: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(254,250,224,0.95)",
+    alignItems: "center",
+    justifyContent: "center",
+    ...T.shadows.card,
+    borderWidth: 1,
+    borderColor: T.colors.surfaceBorder,
+  },
+  refreshBtnText: { fontSize: 20 },
 
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   loadingText: { color: T.colors.textMuted, marginTop: 12, fontSize: 13 },
