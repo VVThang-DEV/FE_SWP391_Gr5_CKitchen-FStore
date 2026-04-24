@@ -4,10 +4,11 @@ import {
   Package,
   Layers,
   Eye,
+  Search,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
-import { Badge, Button, Drawer } from "../../components/ui";
+import { Badge, Button, Drawer, Input } from "../../components/ui";
 import kitchenService from "../../services/kitchenService";
 import "./Inventory.css";
 
@@ -343,6 +344,7 @@ function ProductDetailDrawer({ item, isOpen, onClose }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function KitchenInventory() {
   const [tab, setTab] = useState("ingredient"); // "ingredient" | "product"
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Ingredient tab state
   const [inventory, setInventory] = useState([]);
@@ -415,6 +417,16 @@ export default function KitchenInventory() {
     <PageWrapper
       title="Quản lý kho"
       subtitle="Xem tồn kho nguyên liệu và thành phẩm"
+      actions={
+        <div style={{ width: "250px" }}>
+           <Input 
+             placeholder={tab === "ingredient" ? "Tìm nguyên liệu..." : "Tìm thành phẩm..."}
+             value={searchTerm} 
+             onChange={(e) => setSearchTerm(e.target.value)} 
+             icon={Search}
+           />
+        </div>
+      }
     >
       {/* Tabs */}
       <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
@@ -480,7 +492,7 @@ export default function KitchenInventory() {
                     </td>
                   </tr>
                 ) : (
-                  inventory.map((item) => {
+                  inventory.filter((i) => i.ingredientName?.toLowerCase().includes(searchTerm.toLowerCase()) || i.ingredientId?.toLowerCase().includes(searchTerm.toLowerCase())).map((item) => {
                     const batches = item.batches || [];
                     const earliestExpiry = batches
                       .filter((b) => b.expiryDate)
@@ -572,7 +584,7 @@ export default function KitchenInventory() {
                   <th>Số lô</th>
                   <th>Hạn SD gần nhất</th>
                   <th>Trạng thái</th>
-                  <th style={{ width: "40px" }} />
+                  <th style={{ width: "60px" }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -595,7 +607,7 @@ export default function KitchenInventory() {
                     </td>
                   </tr>
                 ) : (
-                  productInventory.map((item) => {
+                  productInventory.filter((i) => i.productName?.toLowerCase().includes(searchTerm.toLowerCase()) || i.productId?.toLowerCase().includes(searchTerm.toLowerCase())).map((item) => {
                     const totalQty = item.totalRemainingQuantity ?? 0;
                     const batches = item.batches || [];
                     const earliestExpiry = batches
