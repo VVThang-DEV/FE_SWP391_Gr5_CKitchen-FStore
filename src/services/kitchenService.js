@@ -37,6 +37,9 @@ const kitchenService = {
       .get("/central-kitchen/production-plans", { params: { page, size } })
       .then((r) => r.data.data),
 
+  getProductionPlanById: (planId) =>
+    api.get(`/central-kitchen/production-plans/${planId}`).then((r) => r.data.data),
+
   createProductionPlan: ({ productId, quantity, startDate, endDate, notes }) =>
     api
       .post("/central-kitchen/production-plans", {
@@ -48,12 +51,60 @@ const kitchenService = {
       })
       .then((r) => r.data.data),
 
-  // ── Inventory ─────────────────────────────────────────────────────────────
-  getInventory: ({ ingredientId, ingredientName, page = 0, size = 20 } = {}) =>
+  startProductionPlan: (planId) =>
+    api.patch(`/central-kitchen/production-plans/${planId}/start`).then((r) => r.data.data),
+
+  completeProductionPlan: (planId, { expiryDate, notes }) =>
+    api.patch(`/central-kitchen/production-plans/${planId}/complete`, { expiryDate, notes }).then((r) => r.data.data),
+
+  cancelProductionPlan: (planId, { notes }) =>
+    api.patch(`/central-kitchen/production-plans/${planId}/cancel`, { notes }).then((r) => r.data.data),
+
+  checkRecipeAvailability: (productId, quantity) =>
+    api.get(`/central-kitchen/products/${productId}/recipe-check`, { params: { quantity } }).then((r) => r.data.data),
+
+  // ── Products & Inventory ──────────────────────────────────────────────────
+  getProducts: ({ search, category, page = 0, size = 20 } = {}) =>
+    api
+      .get("/central-kitchen/products", { params: { search, category, page, size } })
+      .then((r) => r.data.data),
+
+  getInventory: ({ ingredientId, ingredientName, lowStock, page = 0, size = 20 } = {}) =>
     api
       .get("/central-kitchen/inventory", {
-        params: { ingredientId, ingredientName, page, size },
+        params: { ingredientId, ingredientName, lowStock, page, size },
       })
+      .then((r) => r.data.data),
+
+  getProductInventory: ({ productId, productName, page = 0, size = 20 } = {}) =>
+    api
+      .get("/central-kitchen/inventory/products", { params: { productId, productName, page, size } })
+      .then((r) => r.data.data),
+
+  // ── Ingredient Batches ────────────────────────────────────────────────────
+  getIngredientBatches: ({ ingredientId, ingredientName, status, page = 0, size = 20 } = {}) =>
+    api
+      .get("/central-kitchen/ingredient-batches", { params: { ingredientId, ingredientName, status, page, size } })
+      .then((r) => r.data.data),
+
+  getIngredientBatchById: (batchId) =>
+    api.get(`/central-kitchen/ingredient-batches/${batchId}`).then((r) => r.data.data),
+
+  createIngredientBatch: (data) =>
+    api.post("/central-kitchen/ingredient-batches", data).then((r) => r.data.data),
+
+  // ── Product Batches ───────────────────────────────────────────────────────
+  getProductBatches: ({ productId, status, page = 0, size = 20 } = {}) =>
+    api
+      .get("/central-kitchen/product-batches", { params: { productId, status, page, size } })
+      .then((r) => r.data.data),
+
+  getProductBatchById: (batchId) =>
+    api.get(`/central-kitchen/product-batches/${batchId}`).then((r) => r.data.data),
+
+  updateProductBatch: (batchId, { expiryDate, status, notes }) =>
+    api
+      .patch(`/central-kitchen/product-batches/${batchId}`, { expiryDate, status, notes })
       .then((r) => r.data.data),
 
   // ── Stores ────────────────────────────────────────────────────────────────
