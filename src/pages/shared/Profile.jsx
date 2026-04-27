@@ -1,34 +1,82 @@
-import { useState } from "react";
-import { User, Mail, Shield, Phone, MapPin, Camera, Save } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  User,
+  Mail,
+  Shield,
+  Phone,
+  MapPin,
+  Camera,
+  Store,
+  ChefHat,
+  RefreshCw,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
 import { Card, Input, Button, Badge } from "../../components/ui";
 import { useAuth, ROLE_INFO } from "../../contexts/AuthContext";
+import authService from "../../services/authService";
 
 export default function Profile() {
   const { user } = useAuth();
-  
-  const [form, setForm] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    phone: "0901234567", // Mock data
-    address: "123 Đường ABC, Quận 1, TP.HCM", // Mock data
-  });
-  
-  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    setSaving(true);
-    setTimeout(() => {
-      toast.success("Cập nhật thông tin cá nhân thành công!");
-      setSaving(false);
-    }, 1000);
+  const [profile, setProfile] = useState(null);
+  const [myStore, setMyStore] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchProfile = async ({ silent = false } = {}) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const me = await authService.getMe();
+      setProfile(me || null);
+      setMyStore(
+        me?.storeId
+          ? {
+              id: me.storeId,
+              name: me.storeName,
+              address: me.storeAddress,
+              phone: me.storePhone,
+              type: "STORE"
+            }
+          : me?.kitchenId 
+          ? {
+              id: me.kitchenId,
+              name: me.kitchenName,
+              address: me.kitchenAddress,
+              phone: me.kitchenPhone,
+              type: "KITCHEN"
+            }
+          : null
+      );
+    } catch (error) {
+      console.error("Failed to fetch profile:", error);
+      toast.error("Không tải được thông tin hồ sơ từ máy chủ");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
   const roleInfo = ROLE_INFO[user?.role] || {};
+  const displayName = profile?.fullName || profile?.username || user?.name || "Người dùng";
+  const displayEmail = profile?.email || user?.email || "Chưa cập nhật";
+  const displayUsername = profile?.username || "Chưa cập nhật";
 
   return (
     <PageWrapper title="Hồ sơ cá nhân" subtitle="Quản lý thông tin tài khoản của bạn">
+      {loading ? (
+        <Card style={{ padding: "20px" }}>Đang tải thông tin hồ sơ...</Card>
+      ) : null}
+
       <div className="dashboard-grid" style={{ gridTemplateColumns: "1fr 2fr", gap: "24px" }}>
         {/* Left Column: Avatar & Role */}
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -46,7 +94,7 @@ export default function Profile() {
                 fontWeight: 700,
                 color: "white"
               }}>
-                {user?.name?.charAt(0) || "U"}
+                {displayName?.charAt(0) || "U"}
               </div>
               <button style={{ 
                 position: "absolute", 
@@ -67,21 +115,31 @@ export default function Profile() {
               </button>
             </div>
             
-            <h3 style={{ marginBottom: "8px" }}>{user?.name}</h3>
+            <h3 style={{ marginBottom: "8px" }}>{displayName}</h3>
             <Badge variant={roleInfo.color || "neutral"}>{roleInfo.label}</Badge>
             
             <div style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid var(--surface-border)", textAlign: "left", display: "flex", flexDirection: "column", gap: "12px" }}>
                <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", color: "var(--text-secondary)" }}>
-                  <Mail size={16} /> <span>{user?.email}</span>
+                  <Mail size={16} /> <span>{displayEmail}</span>
                </div>
                <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", color: "var(--text-secondary)" }}>
                   <Shield size={16} /> <span>Quyền hạn: {user?.role}</span>
                </div>
+               <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "14px", color: "var(--text-secondary)" }}>
+                  {myStore?.type === "KITCHEN" ? <ChefHat size={16} /> : <Store size={16} />} 
+                  <span>{myStore?.type === "KITCHEN" ? "Bếp chính" : "Cửa hàng"}: {myStore?.name || "Không trực thuộc"}</span>
+               </div>
+            </div>
+
+            <div style={{ marginTop: "20px", display: "flex", justifyContent: "center" }}>
+              <Button icon={RefreshCw} variant="ghost" onClick={() => fetchProfile({ silent: true })} disabled={refreshing}>
+                {refreshing ? "Đang đồng bộ..." : "Đồng bộ dữ liệu"}
+              </Button>
             </div>
           </Card>
         </div>
 
-        {/* Right Column: Edit Form */}
+        {/* Right Column: Profile Details */}
         <Card style={{ padding: "32px" }}>
           <h4 style={{ marginBottom: "24px", display: "flex", alignItems: "center", gap: "8px" }}>
             <User size={20} color="var(--primary)" /> Thông tin chi tiết
@@ -91,36 +149,50 @@ export default function Profile() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
               <Input 
                 label="Họ và tên" 
-                value={form.name} 
-                onChange={(e) => setForm({...form, name: e.target.value})} 
+                value={displayName}
+                disabled
               />
               <Input 
                 label="Email" 
-                value={form.email} 
+                value={displayEmail}
                 disabled 
               />
             </div>
             
+
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-              <Input 
-                label="Số điện thoại" 
-                icon={Phone}
-                value={form.phone} 
-                onChange={(e) => setForm({...form, phone: e.target.value})} 
+              <Input
+                label="Tên đăng nhập"
+                value={displayUsername}
+                disabled
               />
-              <Input 
-                label="Địa chỉ" 
-                icon={MapPin}
-                value={form.address} 
-                onChange={(e) => setForm({...form, address: e.target.value})} 
+              <Input
+                label="Mã người dùng"
+                value={profile?.userId != null ? String(profile.userId) : "Chưa cập nhật"}
+                disabled
               />
             </div>
 
-            <div style={{ marginTop: "12px", paddingTop: "24px", borderTop: "1px solid var(--surface-border)", display: "flex", justifyContent: "flex-end" }}>
-              <Button icon={Save} onClick={handleSave} disabled={saving}>
-                {saving ? "Đang lưu..." : "Lưu thay đổi"}
-              </Button>
+            <div style={{ marginTop: "12px", paddingTop: "24px", borderTop: "1px solid var(--surface-border)" }}>
+              <h4 style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                {myStore?.type === "KITCHEN" ? <ChefHat size={18} color="var(--primary)" /> : <Store size={18} color="var(--primary)" />} 
+                {myStore?.type === "KITCHEN" ? "Bếp trực thuộc" : "Cửa hàng trực thuộc"}
+              </h4>
+              {myStore ? (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                  <Input label="Mã" value={myStore.id || "Chưa cập nhật"} disabled />
+                  <Input label="Tên" value={myStore.name || "Chưa cập nhật"} disabled />
+                  <Input label="Địa chỉ" value={myStore.address || "Chưa cập nhật"} disabled />
+                  <Input label="Số điện thoại" value={myStore.phone || "Chưa cập nhật"} disabled />
+                </div>
+              ) : (
+                <Card style={{ padding: "16px", background: "var(--surface-hover)", color: "var(--text-secondary)" }}>
+                  Tài khoản này hiện chưa trực thuộc cửa hàng hay bếp nào.
+                </Card>
+              )}
             </div>
+
           </div>
         </Card>
       </div>

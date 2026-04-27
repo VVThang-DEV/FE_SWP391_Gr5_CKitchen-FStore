@@ -31,6 +31,10 @@ export default function UserManagement() {
   const [showDetail, setShowDetail] = useState(false);
   const [viewUser, setViewUser] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [roles, setRoles] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [kitchens, setKitchens] = useState([]);
+
   const [form, setForm] = useState({
     username: "",
     password: "",
@@ -39,6 +43,8 @@ export default function UserManagement() {
     roleName: "",
     status: "ACTIVE",
     verify: true,
+    storeId: "",
+    kitchenId: "",
   });
   const [errors, setErrors] = useState({});
 
@@ -55,14 +61,32 @@ export default function UserManagement() {
     }
   };
 
+  const fetchMetadata = async () => {
+    try {
+      const [rolesData, storesData, kitchensData] = await Promise.all([
+        adminService.roles.getAll(),
+        adminService.catalog.getStores({ size: 100 }),
+        adminService.catalog.getKitchens({ size: 100 })
+      ]);
+      setRoles(rolesData || []);
+      setStores(storesData?.content || []);
+      setKitchens(kitchensData?.content || []);
+    } catch (err) {
+      console.error("Failed to fetch metadata:", err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchMetadata();
   }, []);
 
-  const ROLE_OPTIONS = Object.entries(ROLE_INFO).map(([value, info]) => ({
-    value,
-    label: info.label,
-  }));
+  const ROLE_OPTIONS = roles
+    .filter((r) => r.name !== "MEMBER")
+    .map((r) => ({
+      value: r.name,
+      label: r.description || ROLE_INFO[r.name]?.label || r.name,
+    }));
 
   const STATUS_OPTIONS = [
     { value: "ACTIVE", label: "Hoạt động" },
@@ -79,6 +103,8 @@ export default function UserManagement() {
       roleName: "",
       status: "ACTIVE",
       verify: true,
+      storeId: "",
+      kitchenId: "",
     });
     setErrors({});
     setShowModal(true);
@@ -94,6 +120,8 @@ export default function UserManagement() {
       password: "", // Luôn reset password khi edit
       status: user.status,
       verify: true,
+      storeId: user.store?.id || "",
+      kitchenId: user.kitchen?.id || "",
     });
     setErrors({});
     setShowModal(true);
@@ -101,12 +129,20 @@ export default function UserManagement() {
 
   const validate = () => {
     const errs = {};
-    if (!form.username?.trim()) errs.username = "Vui lòng nhập tên đăng nhập";
-    if (!editUser && !form.password?.trim())
-      errs.password = "Vui lòng nhập mật khẩu";
-    if (!form.fullName?.trim()) errs.fullName = "Vui lòng nhập họ và tên";
+    if (editUser) {
+      if (!form.fullName?.trim()) errs.fullName = "Vui lòng nhập họ và tên";
+    }
     if (!form.email?.trim()) errs.email = "Vui lòng nhập email";
     if (!form.roleName) errs.roleName = "Vui lòng chọn vai trò";
+
+    if (!editUser) {
+      if (form.roleName === "FRANCHISE_STORE_STAFF" && !form.storeId) {
+        errs.storeId = "Vui lòng chọn cửa hàng";
+      }
+      if (form.roleName === "CENTRAL_KITCHEN_STAFF" && !form.kitchenId) {
+        errs.kitchenId = "Vui lòng chọn bếp trung tâm";
+      }
+    }
 
     setErrors(errs);
 
@@ -142,17 +178,14 @@ export default function UserManagement() {
       } else {
         // Clean payload for creation
         const createPayload = {
-          username: form.username,
-          password: form.password,
-          fullName: form.fullName,
           email: form.email,
           roleName: form.roleName,
-          status: form.status,
-          verify: form.verify,
+          storeId: form.storeId,
+          kitchenId: form.kitchenId,
         };
 
         await adminService.users.create(createPayload);
-        toast.success(`Đã tạo người dùng ${form.fullName}`);
+        toast.success(`Đã gửi email đăng ký cho ${form.email}`);
       }
       setShowModal(false);
       fetchUsers();
@@ -370,107 +403,174 @@ export default function UserManagement() {
         }
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}
-          >
-            <Input
-              label="Tên đăng nhập"
-              required
-              disabled={!!editUser}
-              value={form.username}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, username: e.target.value }))
-              }
-              placeholder="admin_01"
-              error={errors.username}
-            />
-            {!editUser && (
-              <Input
-                label="Mật khẩu"
-                required
-                type="password"
-                value={form.password}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, password: e.target.value }))
-                }
-                placeholder="••••••••"
-                error={errors.password}
-              />
-            )}
-            {editUser && (
-              <Input
-                label="Mật khẩu mới"
-                type="password"
-                value={form.password}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, password: e.target.value }))
-                }
-                placeholder="Để trống nếu không đổi"
-              />
-            )}
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}
-          >
-            <Input
-              label="Họ và tên"
-              required
-              value={form.fullName}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, fullName: e.target.value }))
-              }
-              placeholder="Nguyễn Văn A"
-              error={errors.fullName}
-            />
-            <Input
-              label="Email"
-              required
-              type="email"
-              value={form.email}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, email: e.target.value }))
-              }
-              placeholder="email@ckitchen.vn"
-              error={errors.email}
-            />
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}
-          >
-            <Select
-              label="Vai trò"
-              required
-              options={ROLE_OPTIONS}
-              value={form.roleName}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  roleName: e.target.value,
-                }))
-              }
-              error={errors.roleName}
-            />
-            <Select
-              label="Trạng thái"
-              options={STATUS_OPTIONS}
-              value={form.status}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, status: e.target.value }))
-              }
-            />
-          </div>
+          {editUser ? (
+            <>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "16px",
+                }}
+              >
+                <Input
+                  label="Tên đăng nhập"
+                  required
+                  disabled
+                  value={form.username}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, username: e.target.value }))
+                  }
+                  placeholder="admin_01"
+                  error={errors.username}
+                />
+                <Input
+                  label="Mật khẩu mới"
+                  type="password"
+                  value={form.password}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, password: e.target.value }))
+                  }
+                  placeholder="Để trống nếu không đổi"
+                />
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "16px",
+                }}
+              >
+                <Input
+                  label="Họ và tên"
+                  required
+                  value={form.fullName}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, fullName: e.target.value }))
+                  }
+                  placeholder="Nguyễn Văn A"
+                  error={errors.fullName}
+                />
+                <Input
+                  label="Email"
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, email: e.target.value }))
+                  }
+                  placeholder="email@ckitchen.vn"
+                  error={errors.email}
+                />
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "16px",
+                }}
+              >
+                <Select
+                  label="Vai trò"
+                  required
+                  options={ROLE_OPTIONS}
+                  value={form.roleName}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      roleName: e.target.value,
+                    }))
+                  }
+                  error={errors.roleName}
+                />
+                <Select
+                  label="Trạng thái"
+                  options={STATUS_OPTIONS}
+                  value={form.status}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, status: e.target.value }))
+                  }
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr",
+                  gap: "16px",
+                }}
+              >
+                <Input
+                  label="Email"
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, email: e.target.value }))
+                  }
+                  placeholder="email@ckitchen.vn"
+                  error={errors.email}
+                />
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "16px",
+                }}
+              >
+                <Select
+                  label="Vai trò"
+                  required
+                  options={[{ value: "", label: "-- Chọn vai trò --" }, ...ROLE_OPTIONS]}
+                  value={form.roleName}
+                  onChange={(e) => {
+                    const selectedRole = e.target.value;
+                    setForm((f) => ({
+                      ...f,
+                      roleName: selectedRole,
+                      storeId: "",
+                      kitchenId: "",
+                    }));
+                  }}
+                  error={errors.roleName}
+                />
+
+                {form.roleName === "FRANCHISE_STORE_STAFF" && (
+                  <Select
+                    label="Cửa hàng"
+                    required
+                    options={[
+                      { value: "", label: "-- Chọn cửa hàng --" },
+                      ...stores.map((s) => ({ value: s.id, label: s.name })),
+                    ]}
+                    value={form.storeId}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, storeId: e.target.value }))
+                    }
+                    error={errors.storeId}
+                  />
+                )}
+
+                {form.roleName === "CENTRAL_KITCHEN_STAFF" && (
+                  <Select
+                    label="Bếp trung tâm"
+                    required
+                    options={[
+                      { value: "", label: "-- Chọn bếp --" },
+                      ...kitchens.map((k) => ({ value: k.id, label: k.name })),
+                    ]}
+                    value={form.kitchenId}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, kitchenId: e.target.value }))
+                    }
+                    error={errors.kitchenId}
+                  />
+                )}
+              </div>
+            </>
+          )}
         </div>
       </Modal>
 

@@ -163,7 +163,9 @@ export default function Sidebar() {
         <Logo size={32} className="sidebar__logo-img" />
         <div className="sidebar__brand-text">
           <span className="sidebar__brand-name">CKitchen</span>
-          <span className="sidebar__brand-sub">Franchise Manager</span>
+          <span className="sidebar__brand-sub">
+            {roleInfo?.label || "Quản lý hệ thống"}
+          </span>
         </div>
       </div>
 

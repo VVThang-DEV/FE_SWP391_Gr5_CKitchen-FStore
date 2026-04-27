@@ -54,11 +54,17 @@ const authService = {
   forgotPassword: (email) =>
     api.post("/email/forgot-password", { email }).then((r) => r.data),
 
+  verifyForgotPasswordOtp: (email, otp) =>
+    api.post("/email/verify-forgot-password", { email, otp }).then((r) => r.data),
+
   resetPassword: (payload) =>
     api.post("/email/reset-password", payload).then((r) => r.data),
 
   resendOtp: (email) =>
     api.post("/email/resend", { email }).then((r) => r.data),
+
+  activateAccount: (payload) =>
+    api.post("/email/activate-account", payload).then((r) => r.data),
 };
 
 export default authService;

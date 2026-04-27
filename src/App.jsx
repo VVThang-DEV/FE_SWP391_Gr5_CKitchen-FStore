@@ -15,6 +15,8 @@ import AppLayout from "./components/layout/AppLayout/AppLayout";
 
 // Auth
 import LoginPage from "./pages/auth/LoginPage";
+import ActivateAccount from "./pages/auth/ActivateAccount";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 
 // Dashboards
 import StoreDashboard from "./pages/store/Dashboard";
@@ -90,6 +92,8 @@ function AppRoutes() {
           )
         }
       />
+      <Route path="/activate-account" element={<ActivateAccount />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
       {/* Protected Layout */}
       <Route
