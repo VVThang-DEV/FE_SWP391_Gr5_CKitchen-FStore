@@ -131,6 +131,7 @@ export default function StoreInventory() {
           {r.updatedAt ? formatDate(r.updatedAt) : "—"}
         </span>
       ),
+    },
   ];
 
   const expiredCount = data.filter(
