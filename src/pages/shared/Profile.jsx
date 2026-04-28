@@ -3,9 +3,6 @@ import {
   User,
   Mail,
   Shield,
-  Phone,
-  MapPin,
-  Camera,
   Store,
   ChefHat,
   RefreshCw,
@@ -96,23 +93,7 @@ export default function Profile() {
               }}>
                 {displayName?.charAt(0) || "U"}
               </div>
-              <button style={{ 
-                position: "absolute", 
-                bottom: "0", 
-                right: "0", 
-                width: "36px", 
-                height: "36px", 
-                borderRadius: "50%", 
-                background: "white", 
-                border: "1px solid var(--surface-border)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                cursor: "pointer"
-              }}>
-                <Camera size={18} color="var(--primary)" />
-              </button>
+
             </div>
             
             <h3 style={{ marginBottom: "8px" }}>{displayName}</h3>

@@ -1,16 +1,11 @@
 import { useState, useEffect } from "react";
-import { Save, Clock, Plus, Edit } from "lucide-react";
+import { Clock, Plus, Edit } from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
-import { Card, Button, Input, Select, DataTable, Badge, Modal } from "../../components/ui";
-import { useAuth } from "../../contexts/AuthContext";
-import { useData } from "../../contexts/DataContext";
+import { Card, Button, Input, DataTable, Badge, Modal } from "../../components/ui";
 import adminService from "../../services/adminService";
 
 export default function SystemConfig() {
-  const { user } = useAuth();
-  const { systemConfig: configs, updateConfig, addAuditLog } = useData();
-
   const [priorities, setPriorities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -75,20 +70,6 @@ export default function SystemConfig() {
     }
   };
 
-  const handleChange = (key) => (e) => {
-    updateConfig({ [key]: e.target.value });
-  };
-
-  const handleSaveConfig = (section) => {
-    addAuditLog(
-      "config_updated",
-      user.name,
-      `Cập nhật cài đặt ${section}`,
-      "config",
-    );
-    toast.success(`Đã lưu cài đặt ${section} thành công!`);
-  };
-
   const priorityColumns = [
     { header: "Mã ưu tiên", accessor: "priorityCode", render: (r) => <Badge variant="neutral">{r.priorityCode}</Badge> },
     { header: "Mô tả", accessor: "description" },
@@ -126,95 +107,6 @@ export default function SystemConfig() {
             loading={loading}
             searchable={false}
           />
-        </Card>
-      </div>
-
-      <div className="grid grid--2">
-        <Card>
-          <h4
-            style={{
-              fontFamily: "var(--font-heading)",
-              fontWeight: 600,
-              marginBottom: "20px",
-            }}
-          >
-            Cài đặt chung
-          </h4>
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-          >
-            <Input
-              label="Tên hệ thống"
-              value={configs.systemName}
-              onChange={handleChange("systemName")}
-            />
-            <Input
-              label="Email hỗ trợ"
-              value={configs.email}
-              onChange={handleChange("email")}
-            />
-            <Select
-              label="Múi giờ"
-              options={[
-                { value: "UTC+7", label: "UTC+7 (Việt Nam)" },
-                { value: "UTC+8", label: "UTC+8 (Singapore)" },
-              ]}
-              value={configs.timezone}
-              onChange={handleChange("timezone")}
-            />
-            <Select
-              label="Đơn vị tiền tệ"
-              options={[
-                { value: "VND", label: "VND - Việt Nam Đồng" },
-                { value: "USD", label: "USD - Đô la Mỹ" },
-              ]}
-              value={configs.currency}
-              onChange={handleChange("currency")}
-            />
-            <Button icon={Save} onClick={() => handleSaveConfig("chung")}>
-              Lưu thay đổi
-            </Button>
-          </div>
-        </Card>
-
-        <Card>
-          <h4
-            style={{
-              fontFamily: "var(--font-heading)",
-              fontWeight: 600,
-              marginBottom: "20px",
-            }}
-          >
-            Đơn vị tính
-          </h4>
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-          >
-            <Input
-              label="Đơn vị khối lượng mặc định"
-              value={configs.massUnit}
-              onChange={handleChange("massUnit")}
-            />
-            <Input
-              label="Đơn vị thể tích mặc định"
-              value={configs.volumeUnit}
-              onChange={handleChange("volumeUnit")}
-            />
-            <Input
-              label="Đơn vị đếm mặc định"
-              value={configs.countUnit}
-              onChange={handleChange("countUnit")}
-            />
-            <Input
-              label="Thời gian cảnh báo hết hạn (ngày)"
-              type="number"
-              value={configs.expiryWarningDays}
-              onChange={handleChange("expiryWarningDays")}
-            />
-            <Button icon={Save} onClick={() => handleSaveConfig("đơn vị tính")}>
-              Lưu thay đổi
-            </Button>
-          </div>
         </Card>
       </div>
 

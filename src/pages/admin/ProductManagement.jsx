@@ -22,7 +22,7 @@ const EMPTY_FORM = {
 };
 
 export default function ProductManagement() {
-  const { ingredients, formatCurrency, addAuditLog } = useData();
+  const { formatCurrency } = useData();
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -97,7 +97,6 @@ export default function ProductManagement() {
         setSelectedIds([]);
       } else {
         await managerService.products.delete(confirmDelete.id);
-        addAuditLog("product_deleted", null, `Đã xóa sản phẩm ${confirmDelete.name}`, "products");
         toast.success(`Đã xóa sản phẩm ${confirmDelete.name}`);
       }
       setConfirmDelete(null);
@@ -129,11 +128,9 @@ export default function ProductManagement() {
 
       if (editProduct) {
         await managerService.products.update(editProduct.id, fields);
-        addAuditLog("product_updated", null, `Cập nhật sản phẩm ${fields.name}`, "products");
         toast.success("Cập nhật thành công");
       } else {
         await managerService.products.create(fields);
-        addAuditLog("product_created", null, `Tạo mới sản phẩm ${fields.name}`, "products");
         toast.success("Tạo mới thành công");
       }
       setShowModal(false);

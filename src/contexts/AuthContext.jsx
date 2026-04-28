@@ -131,14 +131,9 @@ export function AuthProvider({ children }) {
       profile = tokenData;
     }
 
-    // Debug: inspect what the API actually returns
-    console.log("[auth] tokenData:", tokenData);
-    console.log("[auth] profile:", profile);
-
     // Extract role from JWT payload (source of truth)
     const jwtPayload = parseJwt(tokenData.token);
     const role = normalizeRole(extractRole(jwtPayload));
-    console.log("[auth] role:", role);
 
     if (!role) {
       console.warn("[auth] Could not determine role. jwtPayload:", jwtPayload);
