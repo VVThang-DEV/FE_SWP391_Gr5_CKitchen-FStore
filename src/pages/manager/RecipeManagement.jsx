@@ -43,6 +43,7 @@ export default function RecipeManagement() {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState(null);
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
@@ -182,6 +183,29 @@ export default function RecipeManagement() {
     } catch (err) {
       const msg = err.response?.data?.message ?? "Lưu công thức thất bại";
       toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteGroupConfirm = async () => {
+    if (!confirmDeleteGroup) return;
+    setSaving(true);
+    try {
+      await Promise.all(
+        confirmDeleteGroup.items.map((r) =>
+          managerService.recipes.delete(r.id),
+        ),
+      );
+      setRecipes((prev) =>
+        prev.filter((r) => r.productId !== confirmDeleteGroup.productId),
+      );
+      toast.success(
+        `Đã xóa tất cả công thức của ${confirmDeleteGroup.productName}`,
+      );
+      setConfirmDeleteGroup(null);
+    } catch {
+      toast.error("Xóa thất bại");
     } finally {
       setSaving(false);
     }
@@ -404,6 +428,14 @@ export default function RecipeManagement() {
                 <Badge variant="neutral" style={{ marginLeft: "auto" }}>
                   {group.items.length} nguyên liệu
                 </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  icon={Trash2}
+                  title="Xóa tất cả công thức của sản phẩm này"
+                  onClick={() => setConfirmDeleteGroup(group)}
+                />
               </div>
 
               {/* Ingredients table */}
@@ -936,6 +968,36 @@ export default function RecipeManagement() {
             {confirmDelete?.productName || confirmDelete?.productId}
           </strong>
           ?
+        </p>
+      </Modal>
+      {/* Delete Group Confirmation */}
+      <Modal
+        isOpen={!!confirmDeleteGroup}
+        onClose={() => setConfirmDeleteGroup(null)}
+        title="Xóa tất cả công thức"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmDeleteGroup(null)}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteGroupConfirm}
+              disabled={saving}
+            >
+              Xóa tất cả
+            </Button>
+          </>
+        }
+      >
+        <p>
+          Xóa toàn bộ{" "}
+          <strong>{confirmDeleteGroup?.items.length} công thức</strong> của sản
+          phẩm <strong>{confirmDeleteGroup?.productName}</strong>? Hành động này
+          không thể hoàn tác.
         </p>
       </Modal>
     </PageWrapper>

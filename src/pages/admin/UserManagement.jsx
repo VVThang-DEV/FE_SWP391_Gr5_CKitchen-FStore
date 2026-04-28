@@ -66,7 +66,7 @@ export default function UserManagement() {
       const [rolesData, storesData, kitchensData] = await Promise.all([
         adminService.roles.getAll(),
         adminService.catalog.getStores({ size: 100 }),
-        adminService.catalog.getKitchens({ size: 100 })
+        adminService.catalog.getKitchens({ size: 100 }),
       ]);
       setRoles(rolesData || []);
       setStores(storesData?.content || []);
@@ -523,7 +523,10 @@ export default function UserManagement() {
                 <Select
                   label="Vai trò"
                   required
-                  options={[{ value: "", label: "-- Chọn vai trò --" }, ...ROLE_OPTIONS]}
+                  options={[
+                    { value: "", label: "-- Chọn vai trò --" },
+                    ...ROLE_OPTIONS,
+                  ]}
                   value={form.roleName}
                   onChange={(e) => {
                     const selectedRole = e.target.value;

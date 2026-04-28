@@ -1,10 +1,22 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Plus, Edit, Trash2, Eye, Upload, CheckSquare, Square } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  Upload,
+  CheckSquare,
+  Square,
+  Sparkles,
+  RefreshCw,
+  PackagePlus,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
 import { DataTable, Badge, Button, Modal } from "../../components/ui";
 import { Input, Select } from "../../components/ui";
 import managerService from "../../services/managerService";
+import { suggestIngredients } from "../../services/aiService";
 
 function formatCurrency(v) {
   if (v == null) return "—";
@@ -30,7 +42,6 @@ const EMPTY_FORM = {
 };
 
 export default function ProductCatalog() {
-
   const [products, setProducts] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -45,6 +56,14 @@ export default function ProductCatalog() {
   const [showRecipeModal, setShowRecipeModal] = useState(null);
   const [recipeItems, setRecipeItems] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  // ── Recipe AI state ────────────────────────────────────────────────────────
+  const [ingredients, setIngredients] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [selectedAiIdxs, setSelectedAiIdxs] = useState(new Set());
+  const [suggestionQtys, setSuggestionQtys] = useState({});
+  const [suggestionUnits, setSuggestionUnits] = useState({});
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [imageFiles, setImageFiles] = useState(null);
@@ -76,11 +95,13 @@ export default function ProductCatalog() {
       managerService.products.getAll({ size: 200 }),
       managerService.recipes.getAll({ size: 200 }),
       managerService.products.getCategories(),
+      managerService.inventory.getIngredients(),
     ])
-      .then(([prod, rec, cats]) => {
+      .then(([prod, rec, cats, ings]) => {
         if (!mounted) return;
         setProducts(Array.isArray(prod) ? prod : (prod?.content ?? []));
         setRecipes(Array.isArray(rec) ? rec : (rec?.content ?? []));
+        setIngredients(Array.isArray(ings) ? ings : (ings?.content ?? []));
         setCategories(
           Array.isArray(cats)
             ? cats.map((c) =>
@@ -202,8 +223,10 @@ export default function ProductCatalog() {
     setSaving(true);
     try {
       if (isBulkDelete) {
-        await Promise.all(selectedIds.map(id => managerService.products.delete(id)));
-        setProducts(prev => prev.filter(p => !selectedIds.includes(p.id)));
+        await Promise.all(
+          selectedIds.map((id) => managerService.products.delete(id)),
+        );
+        setProducts((prev) => prev.filter((p) => !selectedIds.includes(p.id)));
         toast.success(`Đã xóa ${selectedIds.length} sản phẩm`);
         setSelectedIds([]);
       } else {
@@ -224,13 +247,13 @@ export default function ProductCatalog() {
     if (selectedIds.length === products.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(products.map(p => p.id));
+      setSelectedIds(products.map((p) => p.id));
     }
   };
 
   const handleSelectOne = (id) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
   };
 
@@ -249,7 +272,115 @@ export default function ProductCatalog() {
           }))
         : [{ id: null, ingredientId: "", quantity: "", unit: "kg" }],
     );
+    setAiSuggestions([]);
+    setSelectedAiIdxs(new Set());
+    setSuggestionQtys({});
+    setSuggestionUnits({});
     setShowRecipeModal(product);
+  };
+
+  // ── Recipe AI handlers ─────────────────────────────────────────────────────
+  const handleRecipeAiSuggest = async () => {
+    if (!showRecipeModal) return;
+    setAiLoading(true);
+    setAiSuggestions([]);
+    setSelectedAiIdxs(new Set());
+    try {
+      const results = await suggestIngredients(
+        showRecipeModal.name,
+        ingredients,
+      );
+      if (!results.length) {
+        toast("Kho hiện tại không có nguyên liệu phù hợp cho món này", {
+          icon: "⚠️",
+        });
+        return;
+      }
+      setAiSuggestions(results);
+      setSelectedAiIdxs(new Set(results.map((_, i) => i)));
+      setSuggestionQtys(
+        Object.fromEntries(results.map((s, i) => [i, s.quantity])),
+      );
+      setSuggestionUnits(
+        Object.fromEntries(
+          results.map((s, i) => {
+            const cat = ingredients.find((ing) => ing.id === s.ingredientId);
+            return [i, cat?.unit || s.unit || "kg"];
+          }),
+        ),
+      );
+    } catch (err) {
+      toast.error(err.message || "AI gợi ý thất bại, vui lòng thử lại");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleToggleAiSuggestion = (idx) => {
+    setSelectedAiIdxs((prev) => {
+      const next = new Set(prev);
+      next.has(idx) ? next.delete(idx) : next.add(idx);
+      return next;
+    });
+  };
+
+  const handleSelectAllAi = () => {
+    if (selectedAiIdxs.size === aiSuggestions.length) {
+      setSelectedAiIdxs(new Set());
+    } else {
+      setSelectedAiIdxs(new Set(aiSuggestions.map((_, i) => i)));
+    }
+  };
+
+  const handleAddAiSelected = async () => {
+    const selected = aiSuggestions.filter((_, i) => selectedAiIdxs.has(i));
+    if (!selected.length) {
+      toast.error("Không có nguyên liệu nào được chọn");
+      return;
+    }
+    setSaving(true);
+    const results = await Promise.allSettled(
+      selected.map((s) => {
+        const origIdx = aiSuggestions.indexOf(s);
+        const catalogUnit =
+          ingredients.find((ing) => ing.id === s.ingredientId)?.unit || s.unit;
+        return managerService.recipes.create({
+          productId: showRecipeModal.id,
+          ingredientId: s.ingredientId,
+          quantity:
+            parseFloat(suggestionQtys[origIdx] ?? s.quantity) || s.quantity,
+          unit: suggestionUnits[origIdx] || catalogUnit,
+        });
+      }),
+    );
+    const added = results
+      .filter((r) => r.status === "fulfilled")
+      .map((r) => r.value)
+      .filter(Boolean)
+      .map((raw) => ({
+        ...raw,
+        productName: raw.productName || showRecipeModal.name,
+        ingredientName: raw.ingredientName || raw.ingredientId,
+      }));
+    const failed = results.filter((r) => r.status === "rejected").length;
+    if (added.length > 0) {
+      setRecipes((prev) => [...prev, ...added]);
+      setRecipeItems((prev) => [
+        ...prev.filter((r) => r.ingredientId),
+        ...added.map((r) => ({
+          id: r.id,
+          ingredientId: r.ingredientId,
+          quantity: String(r.quantity),
+          unit: r.unit,
+        })),
+      ]);
+      toast.success(`Đã thêm ${added.length} nguyên liệu vào công thức`);
+    }
+    if (failed > 0)
+      toast.error(`${failed} nguyên liệu thêm thất bại (có thể đã tồn tại)`);
+    setSaving(false);
+    setAiSuggestions([]);
+    setSelectedAiIdxs(new Set());
   };
 
   const handleSaveRecipe = async () => {
@@ -326,16 +457,36 @@ export default function ProductCatalog() {
   const columns = [
     {
       header: (
-        <div onClick={(e) => { e.stopPropagation(); handleSelectAll(); }} style={{ cursor: "pointer" }}>
-          {selectedIds.length === products.length && products.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSelectAll();
+          }}
+          style={{ cursor: "pointer" }}
+        >
+          {selectedIds.length === products.length && products.length > 0 ? (
+            <CheckSquare size={18} />
+          ) : (
+            <Square size={18} />
+          )}
         </div>
       ),
       width: "40px",
       render: (r) => (
-        <div onClick={(e) => { e.stopPropagation(); handleSelectOne(r.id); }} style={{ cursor: "pointer" }}>
-          {selectedIds.includes(r.id) ? <CheckSquare size={18} color="var(--primary)" /> : <Square size={18} />}
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSelectOne(r.id);
+          }}
+          style={{ cursor: "pointer" }}
+        >
+          {selectedIds.includes(r.id) ? (
+            <CheckSquare size={18} color="var(--primary)" />
+          ) : (
+            <Square size={18} />
+          )}
         </div>
-      )
+      ),
     },
     {
       header: "Thao tác",
@@ -489,7 +640,9 @@ export default function ProductCatalog() {
               icon={Trash2}
               onClick={() => {
                 setIsBulkDelete(true);
-                setConfirmDelete({ name: `${selectedIds.length} sản phẩm đã chọn` });
+                setConfirmDelete({
+                  name: `${selectedIds.length} sản phẩm đã chọn`,
+                });
               }}
             >
               Xóa {selectedIds.length} mục
@@ -981,21 +1134,47 @@ export default function ProductCatalog() {
       {/* Recipe Editor Modal */}
       <Modal
         isOpen={!!showRecipeModal}
-        onClose={() => setShowRecipeModal(null)}
+        onClose={() => {
+          setShowRecipeModal(null);
+          setAiSuggestions([]);
+        }}
         title={showRecipeModal ? `Công thức: ${showRecipeModal.name}` : ""}
         size="lg"
         footer={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setShowRecipeModal(null)}
-            >
-              Hủy
-            </Button>
-            <Button onClick={handleSaveRecipe} disabled={saving}>
-              Lưu công thức
-            </Button>
-          </>
+          aiSuggestions.length > 0 ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setAiSuggestions([]);
+                  setSelectedAiIdxs(new Set());
+                }}
+              >
+                ← Nhập thủ công
+              </Button>
+              <Button
+                onClick={handleAddAiSelected}
+                disabled={saving || selectedAiIdxs.size === 0}
+                icon={PackagePlus}
+              >
+                {saving
+                  ? "Đang thêm…"
+                  : `Thêm ${selectedAiIdxs.size} nguyên liệu đã chọn`}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setShowRecipeModal(null)}
+              >
+                Hủy
+              </Button>
+              <Button onClick={handleSaveRecipe} disabled={saving}>
+                Lưu công thức
+              </Button>
+            </>
+          )
         }
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -1003,6 +1182,8 @@ export default function ProductCatalog() {
             Định mức nguyên liệu cho 1 {showRecipeModal?.unit || "phần"} sản
             phẩm
           </p>
+
+          {/* Existing recipe rows */}
           {recipeItems.map((item, idx) => (
             <div
               key={idx}
@@ -1013,9 +1194,12 @@ export default function ProductCatalog() {
                 alignItems: "start",
               }}
             >
-              <Input
-                label={idx === 0 ? "Mã nguyên liệu" : ""}
-                placeholder="VD: ING001"
+              <Select
+                label={idx === 0 ? "Nguyên liệu" : ""}
+                options={ingredients.map((i) => ({
+                  value: i.id,
+                  label: `${i.ingredientName || i.name} (${i.id})`,
+                }))}
                 value={item.ingredientId}
                 disabled={!!item.id}
                 onChange={(e) =>
@@ -1025,6 +1209,7 @@ export default function ProductCatalog() {
                     ),
                   )
                 }
+                placeholder="Chọn nguyên liệu…"
               />
               <Input
                 label={idx === 0 ? "Định mức" : ""}
@@ -1046,8 +1231,13 @@ export default function ProductCatalog() {
                 label={idx === 0 ? "Đơn vị" : ""}
                 options={[
                   { value: "kg", label: "kg" },
-                  { value: "lít", label: "lít" },
                   { value: "g", label: "g" },
+                  { value: "lít", label: "lít" },
+                  { value: "l", label: "l" },
+                  { value: "ml", label: "ml" },
+                  { value: "cái", label: "cái" },
+                  { value: "quả", label: "quả" },
+                  { value: "gói", label: "gói" },
                 ]}
                 value={item.unit}
                 onChange={(e) =>
@@ -1070,18 +1260,293 @@ export default function ProductCatalog() {
               )}
             </div>
           ))}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() =>
-              setRecipeItems((prev) => [
-                ...prev,
-                { ingredientId: "", quantity: "", unit: "kg" },
-              ])
-            }
-          >
-            + Thêm nguyên liệu
-          </Button>
+
+          {/* AI + add new section */}
+          {!aiSuggestions.length && !aiLoading && (
+            <>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingTop: recipeItems.length > 0 ? "4px" : "0",
+                  borderTop:
+                    recipeItems.length > 0
+                      ? "1px solid var(--surface-border)"
+                      : "none",
+                }}
+              >
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    setRecipeItems((prev) => [
+                      ...prev,
+                      { id: null, ingredientId: "", quantity: "", unit: "kg" },
+                    ])
+                  }
+                >
+                  + Thêm nguyên liệu
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={Sparkles}
+                  onClick={handleRecipeAiSuggest}
+                >
+                  ✨ AI Gợi ý
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* AI Loading skeleton */}
+          {aiLoading && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                marginTop: "4px",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "var(--text-muted)",
+                  margin: 0,
+                  fontStyle: "italic",
+                }}
+              >
+                ✨ Đang phân tích nguyên liệu cho "{showRecipeModal?.name}"…
+              </p>
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    height: "54px",
+                    borderRadius: "10px",
+                    background:
+                      "linear-gradient(90deg, var(--surface-hover) 25%, var(--surface) 50%, var(--surface-hover) 75%)",
+                    backgroundSize: "200% 100%",
+                    animation: "shimmer 1.4s infinite",
+                    opacity: 1 - i * 0.12,
+                  }}
+                />
+              ))}
+              <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
+            </div>
+          )}
+
+          {/* AI Suggestion tray */}
+          {!aiLoading && aiSuggestions.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "10px 0 12px",
+                  borderTop: "1px solid var(--surface-border)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    color: "var(--text-muted)",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  ✨ GỢI Ý AI ({aiSuggestions.length})
+                </span>
+                <button
+                  onClick={handleSelectAllAi}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    color: "var(--primary)",
+                    fontWeight: "600",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                  }}
+                >
+                  {selectedAiIdxs.size === aiSuggestions.length
+                    ? "Bỏ chọn tất cả"
+                    : "Chọn tất cả"}
+                </button>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  maxHeight: "340px",
+                  overflowY: "auto",
+                  paddingRight: "2px",
+                }}
+              >
+                {aiSuggestions.map((s, idx) => {
+                  const isSelected = selectedAiIdxs.has(idx);
+                  const catalogMatch = ingredients.find(
+                    (i) => i.id === s.ingredientId,
+                  );
+                  const displayName =
+                    s.name ||
+                    catalogMatch?.ingredientName ||
+                    catalogMatch?.name ||
+                    s.ingredientId;
+                  const displayUnit = catalogMatch?.unit || s.unit;
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => handleToggleAiSuggestion(idx)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        border: isSelected
+                          ? "2px solid var(--primary)"
+                          : "1.5px solid var(--surface-border)",
+                        backgroundColor: isSelected
+                          ? "var(--primary-bg)"
+                          : "var(--surface-card)",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        userSelect: "none",
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: isSelected
+                            ? "var(--primary)"
+                            : "var(--surface-border)",
+                          flexShrink: 0,
+                          fontSize: "16px",
+                        }}
+                      >
+                        {isSelected ? "☑" : "☐"}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "baseline",
+                            gap: "6px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontWeight: "600",
+                              color: "var(--text-dark)",
+                              fontSize: "13px",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {displayName}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            {s.ingredientId}
+                          </span>
+                        </div>
+                        {s.reason && (
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "var(--text-secondary)",
+                              marginTop: "3px",
+                              fontStyle: "italic",
+                            }}
+                          >
+                            {s.reason}
+                          </div>
+                        )}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            marginTop: "2px",
+                          }}
+                        >
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.001"
+                            value={suggestionQtys[idx] ?? s.quantity}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) =>
+                              setSuggestionQtys((prev) => ({
+                                ...prev,
+                                [idx]: e.target.value,
+                              }))
+                            }
+                            style={{
+                              width: "70px",
+                              fontSize: "12px",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              border: "1px solid var(--surface-border)",
+                              background: "var(--surface)",
+                              color: "var(--text-dark)",
+                              fontFamily: "var(--font-mono, monospace)",
+                            }}
+                          />
+                          <select
+                            value={suggestionUnits[idx] ?? displayUnit}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) =>
+                              setSuggestionUnits((prev) => ({
+                                ...prev,
+                                [idx]: e.target.value,
+                              }))
+                            }
+                            style={{
+                              fontSize: "12px",
+                              padding: "2px 4px",
+                              borderRadius: "4px",
+                              border: "1px solid var(--surface-border)",
+                              background: "var(--surface)",
+                              color: "var(--text-dark)",
+                            }}
+                          >
+                            {[
+                              "kg",
+                              "g",
+                              "lít",
+                              "l",
+                              "ml",
+                              "cái",
+                              "quả",
+                              "gói",
+                            ].map((u) => (
+                              <option key={u} value={u}>
+                                {u}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
     </PageWrapper>
