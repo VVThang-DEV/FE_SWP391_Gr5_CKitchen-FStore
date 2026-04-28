@@ -5,11 +5,13 @@ import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
 import { Card, Button, Badge } from "../../components/ui";
 import { Textarea } from "../../components/ui";
 import { useData } from "../../contexts/DataContext";
+import { useAuth } from "../../contexts/AuthContext";
 import storeService from "../../services/storeService";
 
 export default function ReceiveGoods() {
   const { STATUS_LABELS, STATUS_COLORS, formatCurrency, formatDate } =
     useData();
+  const { user } = useAuth();
 
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,8 +58,13 @@ export default function ReceiveGoods() {
   }, [fetchDeliveries]);
 
   const handleConfirm = async (deliveryId, orderId) => {
+    const fb = feedback[orderId] || {};
     try {
-      await storeService.confirmOrderReceipt(orderId);
+      await storeService.confirmReceipt(deliveryId, {
+        receiverName: user.name,
+        temperatureOk: fb.temperatureOk ?? true,
+        notes: fb.comment || "",
+      });
       setConfirmedOrders((prev) => [...prev, orderId]);
       toast.success(
         `Đã xác nhận nhận hàng cho đơn ${orderId}! Tồn kho đã được cập nhật.`,
@@ -97,12 +104,13 @@ export default function ReceiveGoods() {
         )}
         {deliveries.length > 0 &&
           deliveries.map((delivery) => {
-            const orderId = delivery.orderId || delivery.id; // API structure might be direct or nested
+            const deliveryId = delivery.deliveryId || delivery.id;
+            const orderId = delivery.orderId || delivery.order?.orderId || delivery.order?.id || delivery.id;
             const orderTotal = delivery.total || 0;
             const items = delivery.items || [];
             const status = delivery.status?.toLowerCase() || "shipping";
             return (
-              <Card key={delivery.id} className="animate-fade-in-up">
+              <Card key={deliveryId} className="animate-fade-in-up">
                 <div
                   style={{
                     display: "flex",
@@ -140,7 +148,7 @@ export default function ReceiveGoods() {
                         color: "var(--text-secondary)",
                       }}
                     >
-                      Mã vận chuyển: {delivery.id}
+                      Mã vận chuyển: {deliveryId}
                     </p>
                   </div>
                   <span
@@ -186,6 +194,22 @@ export default function ReceiveGoods() {
                         gap: "12px",
                       }}
                     >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <input
+                          type="checkbox"
+                          id={`temp-ok-${orderId}`}
+                          checked={feedback[orderId]?.temperatureOk ?? true}
+                          onChange={(e) =>
+                            setFeedback((prev) => ({
+                              ...prev,
+                              [orderId]: { ...prev[orderId], temperatureOk: e.target.checked },
+                            }))
+                          }
+                        />
+                        <label htmlFor={`temp-ok-${orderId}`} style={{ fontSize: "13px", fontWeight: 500, cursor: "pointer" }}>
+                          Nhiệt độ hàng hóa đạt yêu cầu
+                        </label>
+                      </div>
                       <div
                         style={{
                           display: "flex",
@@ -240,7 +264,7 @@ export default function ReceiveGoods() {
                       />
                       <Button
                         icon={CheckCircle}
-                        onClick={() => handleConfirm(delivery.id, orderId)}
+                        onClick={() => handleConfirm(deliveryId, orderId)}
                       >
                         Xác nhận nhận hàng
                       </Button>
