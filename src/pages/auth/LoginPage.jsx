@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { User, Lock, LogIn } from 'lucide-react';
 import { useAuth, ROLES, ROLE_INFO } from '../../contexts/AuthContext';
 import Logo from '../../components/ui/Logo/Logo';
@@ -87,6 +87,11 @@ export default function LoginPage() {
                 onChange={handleChange}
                 required
               />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "4px" }}>
+              <Link to="/forgot-password" style={{ fontSize: "0.875rem", color: "var(--primary)", textDecoration: "none", fontWeight: "600" }}>
+                Quên mật khẩu?
+              </Link>
             </div>
           </div>
 
