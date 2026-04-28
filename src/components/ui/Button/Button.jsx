@@ -11,6 +11,7 @@ const Button = forwardRef(({
   disabled = false,
   className = '',
   iconOnly = false,
+  block = false,
   ...props
 }, ref) => {
   const classes = [

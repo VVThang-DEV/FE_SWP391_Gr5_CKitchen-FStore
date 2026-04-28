@@ -28,7 +28,7 @@ import "../Dashboard.css";
 
 export default function StoreDashboard() {
   const { user } = useAuth();
-  const { recentActivity = [], weeklyOrders = [], formatCurrency } = useData();
+  const { formatCurrency } = useData();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({
@@ -36,34 +36,101 @@ export default function StoreDashboard() {
     inTransitOrders: 0,
     todayRevenue: 0,
   });
+  const [trends, setTrends] = useState({ pendingOrders: null, revenue: null });
   const [storeName, setStoreName] = useState("");
   const [lowStock, setLowStock] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [weeklyOrders, setWeeklyOrders] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const today = new Date().toISOString().split("T")[0];
-        const [overviewResp, inventoryResp, myStoreResp, salesResp] = await Promise.all([
-          storeService.getOverview(),
-          storeService.getStoreInventory({ size: 100 }),
-          storeService.getMyStore().catch(() => null),
-          storeService.getSalesDaily({ fromDate: today, toDate: today, size: 1 }).catch(() => null),
-        ]);
+        const sevenDaysAgo = new Date(Date.now() - 6 * 86400000)
+          .toISOString()
+          .split("T")[0];
 
+        const [overviewResp, inventoryResp, myStoreResp, salesResp, ordersResp] =
+          await Promise.all([
+            storeService.getOverview(),
+            storeService.getStoreInventory({ size: 100 }),
+            storeService.getMyStore().catch(() => null),
+            storeService
+              .getSalesDaily({ fromDate: sevenDaysAgo, toDate: today, size: 7 })
+              .catch(() => null),
+            storeService.getOrders({ size: 5 }).catch(() => null),
+          ]);
+
+        // Stats
         const salesRows = salesResp?.content ?? salesResp ?? [];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
         const todayRow = salesRows.find((r) => r.reportDate === today);
+        const yesterdayRow = salesRows.find((r) => r.reportDate === yesterday);
+        const todayRevenue = todayRow?.totalRevenue ?? 0;
+        const yesterdayRevenue = yesterdayRow?.totalRevenue ?? 0;
+        const todayOrders = todayRow?.totalOrders ?? todayRow?.orderCount ?? null;
+        const yesterdayOrders = yesterdayRow?.totalOrders ?? yesterdayRow?.orderCount ?? null;
 
         setStats({
           pendingOrders: overviewResp.pendingOrders || 0,
           inTransitOrders: overviewResp.activeDeliveries || 0,
-          todayRevenue: todayRow?.totalRevenue ?? 0,
+          todayRevenue,
         });
+
+        // Revenue trend vs yesterday
+        let revenueTrend = null;
+        if (yesterdayRevenue > 0) {
+          const pct = Math.round(((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100);
+          revenueTrend = pct >= 0 ? `+${pct}% so với hôm qua` : `${pct}% so với hôm qua`;
+        } else if (todayRevenue > 0) {
+          revenueTrend = "Mới có doanh thu hôm nay";
+        }
+
+        // Pending orders trend — today vs yesterday order count
+        let pendingTrend = null;
+        if (todayOrders !== null && yesterdayOrders !== null) {
+          const diff = todayOrders - yesterdayOrders;
+          pendingTrend = diff > 0 ? `+${diff} so với hôm qua` : diff < 0 ? `${diff} so với hôm qua` : "Bằng hôm qua";
+        } else if (todayOrders !== null) {
+          pendingTrend = `${todayOrders} đơn hôm nay`;
+        }
+
+        setTrends({ pendingOrders: pendingTrend, revenue: revenueTrend });
 
         if (myStoreResp?.name) setStoreName(myStoreResp.name);
 
+        // Low stock
         const low = (inventoryResp.content || []).filter((i) => i.lowStock);
         setLowStock(low);
+
+        // Weekly orders chart — build last 7 days with real sales counts
+        const dayLabels = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(Date.now() - (6 - i) * 86400000);
+          return {
+            date: d.toISOString().split("T")[0],
+            day: d.toLocaleDateString("vi-VN", { weekday: "short" }),
+          };
+        });
+        const salesMap = Object.fromEntries(
+          salesRows.map((r) => [r.reportDate, r.totalOrders ?? r.orderCount ?? 0])
+        );
+        setWeeklyOrders(
+          dayLabels.map(({ date, day }) => ({ day, count: salesMap[date] ?? 0 }))
+        );
+
+        // Recent activity from real orders
+        const recentOrders = ordersResp?.content ?? ordersResp ?? [];
+        setRecentActivity(
+          recentOrders.map((o) => ({
+            id: o.orderId || o.id,
+            message: `Đơn ${o.orderId || o.id} — ${o.status}`,
+            time: o.createdAt
+              ? new Date(o.createdAt).toLocaleString("vi-VN")
+              : "",
+            type: "order",
+          }))
+        );
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -93,8 +160,8 @@ export default function StoreDashboard() {
           value={stats.pendingOrders}
           icon={Clock}
           color="warning"
-          trend="up"
-          trendValue="+1 hôm nay"
+          trend={trends.pendingOrders ? (trends.pendingOrders.startsWith("+") ? "up" : "down") : undefined}
+          trendValue={trends.pendingOrders}
         />
         <StatCard
           label="Đang vận chuyển"
@@ -115,8 +182,8 @@ export default function StoreDashboard() {
           value={formatCurrency(stats.todayRevenue)}
           icon={TrendingUp}
           color="primary"
-          trend="up"
-          trendValue="+12%"
+          trend={trends.revenue ? (trends.revenue.startsWith("+") ? "up" : "down") : undefined}
+          trendValue={trends.revenue}
         />
       </div>
 

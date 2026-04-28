@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
-import { DataTable, Badge, Button, Modal } from "../../components/ui";
+import { DataTable, Badge } from "../../components/ui";
 import { useData } from "../../contexts/DataContext";
 import storeService from "../../services/storeService";
 
@@ -11,7 +10,6 @@ export default function StoreInventory() {
 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [confirmDispose, setConfirmDispose] = useState(null);
 
   useEffect(() => {
     const fetchInventory = async () => {
@@ -26,21 +24,6 @@ export default function StoreInventory() {
     };
     fetchInventory();
   }, []);
-
-  const handleDispose = (item) => {
-    setConfirmDispose(item);
-  };
-
-  const handleDisposeConfirm = () => {
-    if (!confirmDispose) return;
-    const item = confirmDispose;
-    // Update local state (no backend dispose endpoint — quantity zeroed locally)
-    setData((prev) =>
-      prev.map((i) => (i.id === item.id ? { ...i, quantity: 0 } : i)),
-    );
-    toast.success(`Đã hủy ${item.quantity}${item.unit} ${item.productName}`);
-    setConfirmDispose(null);
-  };
 
   const columns = [
     { header: "Sản phẩm", accessor: "productName", sortable: true },
@@ -149,28 +132,6 @@ export default function StoreInventory() {
         </span>
       ),
     },
-    {
-      header: "Hành động",
-      width: "100px",
-      render: (row) => {
-        if (!row.expiryDate || row.quantity === 0) return "\u2014";
-        const expired = isExpired(row.expiryDate);
-        const expiring = isExpiringSoon(row.expiryDate);
-        if (expired || expiring) {
-          return (
-            <Button
-              size="sm"
-              variant={expired ? "danger" : "warning"}
-              icon={Trash2}
-              onClick={() => handleDispose(row)}
-            >
-              Hủy
-            </Button>
-          );
-        }
-        return "\u2014";
-      },
-    },
   ];
 
   const expiredCount = data.filter(
@@ -206,81 +167,6 @@ export default function StoreInventory() {
         searchPlaceholder="Tìm sản phẩm..."
         emptyTitle="Chưa có dữ liệu tồn kho"
       />
-
-      {/* Dispose confirmation modal */}
-      <Modal
-        isOpen={!!confirmDispose}
-        onClose={() => setConfirmDispose(null)}
-        title="Xác nhận hủy sản phẩm"
-        size="sm"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setConfirmDispose(null)}>
-              Hủy bỏ
-            </Button>
-            <Button variant="danger" onClick={handleDisposeConfirm}>
-              Xác nhận hủy
-            </Button>
-          </>
-        }
-      >
-        {confirmDispose && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-              fontSize: "14px",
-            }}
-          >
-            <p>Bạn có chắc muốn hủy toàn bộ sản phẩm này?</p>
-            <div
-              style={{
-                padding: "12px",
-                background: "var(--danger-bg, #fef2f2)",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--danger)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "4px",
-                }}
-              >
-                <span>Sản phẩm:</span>
-                <strong>{confirmDispose.productName}</strong>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "4px",
-                }}
-              >
-                <span>Số lượng hủy:</span>
-                <strong>
-                  {confirmDispose.quantity} {confirmDispose.unit}
-                </strong>
-              </div>
-              {confirmDispose.expiryDate && (
-                <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
-                >
-                  <span>Hạn SD:</span>
-                  <span style={{ color: "var(--danger)", fontWeight: 600 }}>
-                    {formatDate(confirmDispose.expiryDate)}
-                  </span>
-                </div>
-              )}
-            </div>
-            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-              Số lượng sẽ được đặt về 0. Thao tác này không thể hoàn tác.
-            </p>
-          </div>
-        )}
-      </Modal>
     </PageWrapper>
   );
 }

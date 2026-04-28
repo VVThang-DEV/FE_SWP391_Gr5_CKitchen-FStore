@@ -13,7 +13,7 @@ import "./NewOrder.css";
 export default function NewOrder() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { stores, orders, formatCurrency } = useData();
+  const { formatCurrency } = useData();
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [notes, setNotes] = useState("");

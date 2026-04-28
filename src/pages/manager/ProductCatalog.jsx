@@ -5,7 +5,6 @@ import PageWrapper from "../../components/layout/PageWrapper/PageWrapper";
 import { DataTable, Badge, Button, Modal } from "../../components/ui";
 import { Input, Select } from "../../components/ui";
 import managerService from "../../services/managerService";
-import { useData } from "../../contexts/DataContext";
 
 function formatCurrency(v) {
   if (v == null) return "—";
@@ -31,7 +30,6 @@ const EMPTY_FORM = {
 };
 
 export default function ProductCatalog() {
-  const { addAuditLog } = useData();
 
   const [products, setProducts] = useState([]);
   const [recipes, setRecipes] = useState([]);
@@ -181,7 +179,6 @@ export default function ProductCatalog() {
           editProduct.id,
           fields,
         );
-        addAuditLog("product_updated", null, `Cập nhật sản phẩm ${fields.name}`, "products");
         setProducts((prev) =>
           prev.map((p) =>
             p.id === editProduct.id ? (updated ?? { ...p, ...fields }) : p,
@@ -190,7 +187,6 @@ export default function ProductCatalog() {
         toast.success(`Đã cập nhật sản phẩm ${form.name}`);
       } else {
         const created = await managerService.products.create(fields);
-        addAuditLog("product_created", null, `Tạo sản phẩm mới ${fields.name}`, "products");
         setProducts((prev) => [...prev, created]);
         toast.success(`Đã tạo sản phẩm ${form.name}`);
       }
@@ -207,13 +203,11 @@ export default function ProductCatalog() {
     try {
       if (isBulkDelete) {
         await Promise.all(selectedIds.map(id => managerService.products.delete(id)));
-        addAuditLog("product_deleted", null, `Đã xóa hàng loạt ${selectedIds.length} sản phẩm`, "products");
         setProducts(prev => prev.filter(p => !selectedIds.includes(p.id)));
         toast.success(`Đã xóa ${selectedIds.length} sản phẩm`);
         setSelectedIds([]);
       } else {
         await managerService.products.delete(confirmDelete.id);
-        addAuditLog("product_deleted", null, `Đã xóa sản phẩm ${confirmDelete.name}`, "products");
         setProducts((prev) => prev.filter((p) => p.id !== confirmDelete.id));
         toast.success(`Đã xóa sản phẩm ${confirmDelete.name}`);
       }

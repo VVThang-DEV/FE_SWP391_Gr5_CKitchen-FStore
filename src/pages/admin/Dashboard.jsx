@@ -31,6 +31,7 @@ import { useAuth, ROLE_INFO } from "../../contexts/AuthContext";
 import { useData } from "../../contexts/DataContext";
 import adminService from "../../services/adminService";
 import managerService from "../../services/managerService";
+import activityLogService from "../../services/activityLogService";
 import "../Dashboard.css";
 
 const ORDER_STATUS_LABELS = {
@@ -45,8 +46,8 @@ const ORDER_STATUS_LABELS = {
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const { formatDateTime, AUDIT_ACTION_LABELS, auditLogs, formatCurrency } =
-    useData();
+  const { formatDateTime, AUDIT_ACTION_LABELS, formatCurrency } = useData();
+  const [auditLogs, setAuditLogs] = useState([]);
   const navigate = useNavigate();
 
   const [overview, setOverview] = useState(null);
@@ -68,6 +69,14 @@ export default function AdminDashboard() {
         console.error("Failed to fetch dashboard data", err);
       } finally {
         setLoading(false);
+      }
+
+      // Activity logs
+      try {
+        const logsData = await activityLogService.getAll({ size: 10 });
+        setAuditLogs(logsData?.content || logsData || []);
+      } catch {
+        // permission not granted — leave empty
       }
 
       // Revenue by store — requires SALES_REPORT_VIEW; gracefully skip if forbidden
@@ -412,18 +421,7 @@ export default function AdminDashboard() {
               >
                 QL Bếp
               </Button>
-              <Button
-                variant="ghost"
-                block
-                style={{
-                  justifyContent: "flex-start",
-                  background: "var(--surface-sub)",
-                  fontWeight: 500,
-                }}
-                onClick={() => navigate("/admin/notifications")}
-              >
-                Gửi thông báo
-              </Button>
+
             </div>
           </Card>
 
@@ -512,36 +510,37 @@ export default function AdminDashboard() {
               },
               {
                 header: "Hành động",
-                accessor: "action",
-                render: (row) => (
-                  <Badge
-                    variant={
-                      row.action.includes("DELETE") ? "danger" : "neutral"
-                    }
-                    size="sm"
-                  >
-                    {AUDIT_ACTION_LABELS?.[row.action] || row.action}
-                  </Badge>
-                ),
+                accessor: "activityType",
+                render: (row) => {
+                  const action = row.activityType?.toString() || "";
+                  return (
+                    <Badge
+                      variant={action.includes("DELETE") ? "danger" : "neutral"}
+                      size="sm"
+                    >
+                      {AUDIT_ACTION_LABELS?.[action] || action}
+                    </Badge>
+                  );
+                },
               },
               {
                 header: "Người thực hiện",
-                accessor: "user",
+                accessor: "fullName",
                 render: (r) => (
-                  <span style={{ fontWeight: 600 }}>{r.user}</span>
+                  <span style={{ fontWeight: 600 }}>{r.fullName}</span>
                 ),
               },
               { header: "Chi tiết sự kiện", accessor: "details" },
               {
-                header: "Phân hệ",
-                accessor: "module",
+                header: "IP",
+                accessor: "ipAddress",
                 render: (row) => (
                   <Badge
                     variant="info"
                     size="sm"
                     style={{ textTransform: "uppercase" }}
                   >
-                    {row.module}
+                    {row.ipAddress || "—"}
                   </Badge>
                 ),
               },

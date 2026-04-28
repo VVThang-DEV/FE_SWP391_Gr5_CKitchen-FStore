@@ -1,22 +1,11 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import {
-  Bell,
-  Search,
   ChevronRight,
   ShoppingCart,
-  ChefHat,
-  AlertTriangle,
-  CheckCircle,
-  Truck,
-  Package,
   Menu,
   Moon,
   Sun,
-  Users,
-  Box,
 } from "lucide-react";
-import { useData } from "../../../contexts/DataContext";
 import { useAuth, ROLE_INFO } from "../../../contexts/AuthContext";
 import { useTheme } from "../../../contexts/ThemeContext";
 import "./Header.css";
@@ -50,81 +39,16 @@ const ROUTE_LABELS = {
   "activity-logs": "Nhật ký hoạt động",
 };
 
-const ACTIVITY_ICONS = {
-  order_created: ShoppingCart,
-  order_confirmed: CheckCircle,
-  production_started: ChefHat,
-  delivery_shipped: Truck,
-  issue_reported: AlertTriangle,
-  stock_low: AlertTriangle,
-  batch_completed: CheckCircle,
-  order_delivered: Package,
-  product_created: Box,
-  product_updated: Box,
-  user_login: Users,
-};
 
-const ROLE_NOTIF_FILTER = {
-  STORE_STAFF: [
-    "order_confirmed",
-    "delivery_shipped",
-    "stock_low",
-    "order_delivered",
-  ],
-  KITCHEN_STAFF: [
-    "order_created",
-    "order_confirmed",
-    "production_started",
-    "stock_low",
-    "batch_completed",
-  ],
-  SUPPLY_COORDINATOR: [
-    "delivery_shipped",
-    "issue_reported",
-    "batch_completed",
-    "order_delivered",
-  ],
-  MANAGER: [
-    "order_created",
-    "production_started",
-    "issue_reported",
-    "stock_low",
-    "product_created",
-    "product_updated",
-  ],
-  ADMIN: [
-    "issue_reported",
-    "order_created",
-    "stock_low",
-    "user_login",
-    "product_deleted",
-  ],
-};
 
 export default function Header() {
   const location = useLocation();
-  const navigate = useNavigate();
   const parts = location.pathname.split("/").filter(Boolean);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [readNotifs, setReadNotifs] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const notifRef = useRef(null);
-  const searchRef = useRef(null);
 
   const { user } = useAuth();
   const { theme, toggleTheme, toggleSidebar } = useTheme();
-  const {
-    orders,
-    products,
-    users,
-    stores,
-    auditLogs,
-    cart = [],
-    formatDateTime,
-  } = useData();
 
+  const cart = [];
   const rolePrefix = user ? ROLE_INFO[user.role]?.path || "" : "";
 
   const breadcrumbs = parts.map((part, i) => ({
@@ -132,112 +56,6 @@ export default function Header() {
     path: "/" + parts.slice(0, i + 1).join("/"),
     isLast: i === parts.length - 1,
   }));
-
-  const allowedActivityTypes = ROLE_NOTIF_FILTER[user?.role] || [];
-  const notifications = useMemo(() => {
-    const list = auditLogs || [];
-    if (user?.role === "ADMIN") return list;
-    return list.filter((act) => allowedActivityTypes.includes(act.action));
-  }, [auditLogs, user?.role, allowedActivityTypes]);
-
-  const unreadCount = notifications.filter(
-    (act) => !readNotifs.includes(act.id),
-  ).length;
-
-  const handleMarkRead = (id) => {
-    setReadNotifs((prev) => (prev.includes(id) ? prev : [...prev, id]));
-  };
-
-  const handleMarkAllRead = () => {
-    setReadNotifs((prev) => {
-      const newIds = notifications
-        .map((a) => a.id)
-        .filter((id) => !prev.includes(id));
-      return [...prev, ...newIds];
-    });
-  };
-
-  // Search results
-  const searchResults = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q || q.length < 2) return [];
-
-    const results = [];
-
-    orders.forEach((o) => {
-      if (
-        o.id.toLowerCase().includes(q) ||
-        (o.storeName || "").toLowerCase().includes(q)
-      ) {
-        results.push({
-          type: "Đơn hàng",
-          label: `${o.id} — ${o.storeName || ""}`,
-          path: `${rolePrefix}/orders`,
-        });
-      }
-    });
-
-    products.forEach((p) => {
-      if (p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)) {
-        results.push({
-          type: "Sản phẩm",
-          label: `${p.id} — ${p.name}`,
-          path:
-            rolePrefix === "/manager"
-              ? "/manager/products"
-              : `${rolePrefix}/inventory`,
-        });
-      }
-    });
-
-    users.forEach((u) => {
-      if (
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q)
-      ) {
-        results.push({
-          type: "Người dùng",
-          label: `${u.name} — ${u.email}`,
-          path: "/admin/users",
-        });
-      }
-    });
-
-    stores.forEach((s) => {
-      if (
-        s.name.toLowerCase().includes(q) ||
-        (s.address || "").toLowerCase().includes(q)
-      ) {
-        results.push({
-          type: "Cửa hàng",
-          label: s.name,
-          path: "/admin/stores",
-        });
-      }
-    });
-
-    return results.slice(0, 8);
-  }, [searchQuery, orders, products, users, stores, rolePrefix]);
-
-  const handleSearchSelect = (path) => {
-    setSearchQuery("");
-    setSearchOpen(false);
-    navigate(path);
-  };
-
-  // Close on click outside
-  useEffect(() => {
-    const handler = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) {
-        setNotifOpen(false);
-      }
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
-        setSearchOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   return (
     <header className="app-header">
@@ -274,56 +92,6 @@ export default function Header() {
       </div>
 
       <div className="app-header__right">
-        {/* Mobile search toggle */}
-        <button
-          className="app-header__search-toggle"
-          onClick={() => setMobileSearchOpen((prev) => !prev)}
-          aria-label="Tìm kiếm"
-        >
-          <Search size={20} />
-        </button>
-
-        <div
-          className={`app-header__search ${mobileSearchOpen ? "app-header__search--mobile-open" : ""}`}
-          ref={searchRef}
-        >
-          <Search size={16} className="app-header__search-icon" />
-          <input
-            type="text"
-            className="app-header__search-input"
-            placeholder="Tìm kiếm..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setSearchOpen(true);
-            }}
-            onFocus={() => setSearchOpen(true)}
-          />
-          {searchOpen && searchResults.length > 0 && (
-            <div className="search-dropdown">
-              {Object.entries(
-                searchResults.reduce((acc, r) => {
-                  (acc[r.type] = acc[r.type] || []).push(r);
-                  return acc;
-                }, {}),
-              ).map(([type, items]) => (
-                <div key={type} className="search-result-group">
-                  <div className="search-result-group__label">{type}</div>
-                  {items.map((item, idx) => (
-                    <button
-                      key={idx}
-                      className="search-result-item"
-                      onClick={() => handleSearchSelect(item.path)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Cart Icon — Only for Store Staff */}
         {user?.role === "STORE_STAFF" && (
           <Link
@@ -347,74 +115,7 @@ export default function Header() {
           {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
         </button>
 
-        {/* Notification Bell */}
-        <div className="notif-wrapper" ref={notifRef}>
-          <button
-            className="app-header__icon-btn"
-            onClick={() => setNotifOpen(!notifOpen)}
-            aria-label={`Thông báo${unreadCount > 0 ? `, ${unreadCount} chưa đọc` : ""}`}
-          >
-            <Bell size={20} />
-            {unreadCount > 0 && (
-              <span className="app-header__notif-dot">{unreadCount}</span>
-            )}
-          </button>
 
-          {notifOpen && (
-            <div className="notif-dropdown">
-              <div className="notif-dropdown__header">
-                <h4>Thông báo</h4>
-                <button
-                  className="notif-dropdown__mark-all"
-                  onClick={handleMarkAllRead}
-                >
-                  Đánh dấu tất cả đã đọc
-                </button>
-              </div>
-              <div className="notif-dropdown__list">
-                {notifications.length === 0 ? (
-                  <div
-                    style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      color: "var(--text-muted)",
-                      fontSize: "13px",
-                    }}
-                  >
-                    Không có thông báo nào.
-                  </div>
-                ) : (
-                  notifications.map((act) => {
-                    const Icon = ACTIVITY_ICONS[act.action] || Bell;
-                    const isRead = readNotifs.includes(act.id);
-                    return (
-                      <div
-                        key={act.id}
-                        className={`notif-item ${isRead ? "notif-item--read" : ""}`}
-                        onClick={() => handleMarkRead(act.id)}
-                      >
-                        <div
-                          className={`notif-item__icon notif-item__icon--${act.action.includes("issue") || act.action.includes("stock") ? "warning" : act.action.includes("delivery") || act.action.includes("batch") ? "success" : "primary"}`}
-                        >
-                          <Icon size={16} />
-                        </div>
-                        <div className="notif-item__content">
-                          <p className="notif-item__message">
-                            {act.details || act.message}
-                          </p>
-                          <p className="notif-item__time">
-                            {formatDateTime(act.timestamp)}
-                          </p>
-                        </div>
-                        {!isRead && <span className="notif-item__unread-dot" />}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </header>
   );
