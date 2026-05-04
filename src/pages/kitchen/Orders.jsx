@@ -33,7 +33,7 @@ import "./Orders.css";
 const STATUS_LABELS = {
   PENDING: "Chờ tiếp nhận",
   ASSIGNED: "Đã tiếp nhận",
-  IN_PROGRESS: "Đang sản xuất",
+  IN_PROGRESS: "Đang chuẩn bị hàng",
   PACKED_WAITING_SHIPPER: "Chờ shipper",
   SHIPPING: "Đang giao",
   DELIVERED: "Đã giao",
@@ -95,7 +95,7 @@ const statusTabs = [
   { value: "", label: "Tất cả" },
   { value: "PENDING", label: "Chờ tiếp nhận" },
   { value: "ASSIGNED", label: "Đã tiếp nhận" },
-  { value: "IN_PROGRESS", label: "Đang sản xuất" },
+  { value: "IN_PROGRESS", label: "Đang chuẩn bị hàng" },
   { value: "PACKED_WAITING_SHIPPER", label: "Chờ shipper" },
 ];
 
@@ -447,7 +447,7 @@ export default function KitchenOrders({
         </span>
       ),
     },
-    { header: "Cửa hàng", accessor: "storeName", sortable: true },
+    { header: "Bếp tiếp nhận", accessor: "kitchenName", sortable: true, render: (row) => row.kitchenName || row.storeName || "—" },
     {
       header: "Sản phẩm",
       accessor: "items",
