@@ -54,6 +54,11 @@ const storeService = {
       })
       .then((r) => r.data.data),
 
+  getInventoryBatches: (productId, { page = 0, size = 20 } = {}) =>
+    api
+      .get("/store/inventory/batches", { params: { productId, page, size } })
+      .then((r) => r.data.data),
+
   // ── Sales Reports ─────────────────────────────────────────────────────────
   getSalesDaily: ({ fromDate, toDate, page = 0, size = 50 } = {}) =>
     api
