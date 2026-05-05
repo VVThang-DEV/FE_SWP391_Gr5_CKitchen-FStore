@@ -67,9 +67,7 @@ const NEXT_STATUS_OPTIONS = {
     { value: "CANCELLED", label: "Hủy" },
   ],
   SHIPPING: [
-    { value: "DELIVERED", label: "Đã giao thành công" },
     { value: "DELAYED", label: "Bị trễ" },
-    { value: "CANCELLED", label: "Hủy" },
   ],
   DELAYED: [
     { value: "SHIPPING", label: "Tiếp tục giao" },
@@ -97,6 +95,8 @@ export default function DeliverySchedule() {
     assignedAt: "",
     notes: "",
   });
+  const [packedOrders, setPackedOrders] = useState([]);
+  const [loadingPackedOrders, setLoadingPackedOrders] = useState(false);
 
   // Update status modal
   const [updateTarget, setUpdateTarget] = useState(null);
@@ -126,8 +126,8 @@ export default function DeliverySchedule() {
 
   // ── Create delivery ─────────────────────────────────────────────────────
   const handleCreate = async () => {
-    if (!createForm.orderId.trim()) {
-      toast.error("Vui lòng nhập mã đơn hàng");
+    if (!createForm.orderId) {
+      toast.error("Vui lòng chọn đơn hàng");
       return;
     }
     try {
@@ -210,7 +210,24 @@ export default function DeliverySchedule() {
       title="Lịch giao hàng"
       subtitle="Quản lý và điều phối giao hàng cho các đơn sẵn sàng"
       actions={
-        <Button icon={Plus} onClick={() => setShowCreate(true)}>
+        <Button
+          icon={Plus}
+          onClick={() => {
+            setCreateForm({
+              orderId: "",
+              status: "ASSIGNED",
+              assignedAt: "",
+              notes: "",
+            });
+            setShowCreate(true);
+            setLoadingPackedOrders(true);
+            supplyService
+              .getOrders({ status: "PACKED_WAITING_SHIPPER", size: 50 })
+              .then((data) => setPackedOrders(data.content || []))
+              .catch(() => setPackedOrders([]))
+              .finally(() => setLoadingPackedOrders(false));
+          }}
+        >
           Tạo lịch giao
         </Button>
       }
@@ -444,14 +461,35 @@ export default function DeliverySchedule() {
         }
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <Input
+          <Select
             label="Mã đơn hàng"
             required
             value={createForm.orderId}
             onChange={(e) =>
               setCreateForm((f) => ({ ...f, orderId: e.target.value }))
             }
-            placeholder="VD: ORD0419001"
+            options={[
+              {
+                value: "",
+                label: loadingPackedOrders
+                  ? "Đang tải..."
+                  : "-- Chọn đơn hàng --",
+              },
+              ...packedOrders
+                .filter((o) => {
+                  const oid = o.orderId || o.id;
+                  return !deliveries.some(
+                    (d) =>
+                      d.orderId === oid &&
+                      d.status !== "CANCELLED" &&
+                      d.status !== "DELIVERED",
+                  );
+                })
+                .map((o) => ({
+                value: o.orderId || o.id,
+                label: `${o.orderId || o.id}${o.storeName ? " — " + o.storeName : ""}${o.kitchenName ? " (" + o.kitchenName + ")" : ""}`,
+              })),
+            ]}
           />
           <Input
             label="Thời gian bắt đầu (tùy chọn)"
